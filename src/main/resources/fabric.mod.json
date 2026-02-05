@@ -3,21 +3,21 @@
   "id": "better_auto_fishing",
   "version": "${version}",
   "name": "Better Auto Fishing",
-  "description": "",
+  "description": "I didn't like any of the auto fishing mods out there, so I made my own.",
   "authors": [],
   "contact": {},
-  "license": "All-Rights-Reserved",
-  "icon": "assets/better_auto_fishing/icon.png",
+  "license": "MIT",
+  "icon": "assets/icon.png",
   "environment": "client",
   "entrypoints": {
-    "fabric-datagen": [
-      "com.indestructible13.better_auto_fishing.client.Better_auto_fishingDataGenerator"
-    ],
     "client": [
-      "com.indestructible13.better_auto_fishing.client.Better_auto_fishingClient"
+      "com.indestructible13.better_auto_fishing.BetterAutoFishingClient"
     ],
     "main": [
       "com.indestructible13.better_auto_fishing.Better_auto_fishing"
+    ],
+    "modmenu": [
+      "com.indestructible13.better_auto_fishing.mods.ModMenuIntegration"
     ]
   },
   "mixins": [
@@ -31,5 +31,8 @@
     "fabricloader": ">=${loader_version}",
     "fabric-api": "*",
     "minecraft": "${minecraft_version}"
+  },
+  "suggests": {
+    "modmenu": "*"
   }
 }
