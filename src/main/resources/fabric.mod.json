@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "better_auto_fishing",
+  "version": "${version}",
+  "name": "Better Auto Fishing",
+  "description": "",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/better_auto_fishing/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "fabric-datagen": [
+      "com.indestructible13.better_auto_fishing.client.Better_auto_fishingDataGenerator"
+    ],
+    "client": [
+      "com.indestructible13.better_auto_fishing.client.Better_auto_fishingClient"
+    ],
+    "main": [
+      "com.indestructible13.better_auto_fishing.Better_auto_fishing"
+    ]
+  },
+  "mixins": [
+    "better_auto_fishing.mixins.json",
+    {
+      "config": "better_auto_fishing.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
