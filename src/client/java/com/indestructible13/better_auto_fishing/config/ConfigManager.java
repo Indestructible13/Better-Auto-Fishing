@@ -9,37 +9,59 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 
-public class BetterAutoFishingConfigManager {
+public class ConfigManager {
     private static final File CONFIG_FILE = FabricLoader.getInstance().getConfigDir().resolve("better-auto-fishing-config.json").toFile();
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     // Check whether the mod is active or not
     public static boolean getActive() {
-        BetterAutoFishingConfig config = BetterAutoFishingConfigManager.load();
+        Config config = ConfigManager.load();
         return config.active;
     }
 
     // Set whether the mod is active or not
     public static void setActive(boolean active) {
-        BetterAutoFishingConfig config = BetterAutoFishingConfigManager.load();
+        Config config = ConfigManager.load();
         config.active = active;
         save(config);
     }
 
-    public static BetterAutoFishingConfig load() {
+    public static int getReelDelay() {
+        Config config = ConfigManager.load();
+        return config.reelDelay;
+    }
+
+    public static void setReelDelay(int reelDelay) {
+        Config config = ConfigManager.load();
+        config.reelDelay = reelDelay;
+        save(config);
+    }
+
+    public static int getCastDelay() {
+        Config config = ConfigManager.load();
+        return config.castDelay;
+    }
+
+    public static void setCastDelay(int castDelay) {
+        Config config = ConfigManager.load();
+        config.castDelay = castDelay;
+        save(config);
+    }
+
+    public static Config load() {
         if (!CONFIG_FILE.exists()) {
-            return new BetterAutoFishingConfig(); // Return defaults if file doesn't exist
+            return new Config(); // Return defaults if file doesn't exist
         }
 
         try (FileReader reader = new FileReader(CONFIG_FILE)) {
-            return GSON.fromJson(reader, BetterAutoFishingConfig.class);
+            return GSON.fromJson(reader, Config.class);
         } catch (IOException e) {
             e.printStackTrace();
-            return new BetterAutoFishingConfig(); // Return defaults if there's an error
+            return new Config(); // Return defaults if there's an error
         }
     }
 
-    public static void save(BetterAutoFishingConfig config) {
+    public static void save(Config config) {
         try (FileWriter writer = new FileWriter(CONFIG_FILE)) {
             GSON.toJson(config, writer);
         } catch (IOException e) {
