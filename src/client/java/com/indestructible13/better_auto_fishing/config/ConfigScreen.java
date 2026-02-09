@@ -7,6 +7,7 @@ import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.gui.widget.TextWidget;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 
 @Environment(EnvType.CLIENT)
 public class ConfigScreen extends Screen {
@@ -35,18 +36,19 @@ public class ConfigScreen extends Screen {
 
         // Error label to display error messages to the user
         TextWidget errorLabel = new TextWidget(labelX, errorRowY, labelWidth, labelHeight, Text.literal(""), this.textRenderer);
-//        errorLabel.(0xFFFF5555); // Red color
         this.addDrawableChild(errorLabel);
 
         // Row 1: Activate or deactivate mod
         TextWidget modActiveLabel = new TextWidget(labelX, row1Y, labelWidth, labelHeight, Text.of("Mod Active:"), this.textRenderer);
         this.addDrawableChild(modActiveLabel);
 
+        Text yesText = Text.literal("Yes").formatted(Formatting.GREEN);
+        Text noText = Text.literal("No").formatted(Formatting.RED);
         this.addDrawableChild(ButtonWidget.builder(
-                Text.of(ConfigManager.getActive() ? "Yes" : "No"),
+                ConfigManager.getActive() ? yesText : noText,
                 button -> {
                     ConfigManager.setActive(!ConfigManager.getActive());
-                    button.setMessage(Text.of(ConfigManager.getActive() ? "Yes" : "No"));
+                    button.setMessage(ConfigManager.getActive() ? yesText : noText);
                     System.out.println(ConfigManager.getActive() ? "Better Auto Fishing activated" : "Better Auto Fishing deactivated");
 
                     //BetterAutoFishingConfigScreen.this.clearAndInit();
