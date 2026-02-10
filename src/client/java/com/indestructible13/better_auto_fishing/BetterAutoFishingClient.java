@@ -1,6 +1,8 @@
 package com.indestructible13.better_auto_fishing;
 
-import com.indestructible13.better_auto_fishing.config.ConfigManager;
+import com.indestructible13.better_auto_fishing.config.ModConfig;
+import me.shedaniel.autoconfig.AutoConfig;
+import me.shedaniel.autoconfig.serializer.GsonConfigSerializer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -17,8 +19,11 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.Random;
+
 public class BetterAutoFishingClient implements ClientModInitializer {
     public static final String MOD_ID = "better_auto_fishing";
+    public static ModConfig config;
 
     private enum AutoFishState {
         IDLE,
@@ -29,6 +34,8 @@ public class BetterAutoFishingClient implements ClientModInitializer {
 
     private AutoFishState currentState = AutoFishState.IDLE;
     private int tickCounter = 0;
+    private int delayValue = 0;
+    private static final Random RANDOM = new Random();
     private KeyBinding toggleActiveKey;
 
     @Override
@@ -36,6 +43,10 @@ public class BetterAutoFishingClient implements ClientModInitializer {
         System.out.println("Better Auto Fishing mod initializing...");
 
         ClientTickEvents.END_CLIENT_TICK.register(this::onTick);
+        AutoConfig.register(ModConfig.class, GsonConfigSerializer::new);
+
+        // Initialize config
+        config = AutoConfig.getConfigHolder(ModConfig.class).getConfig();
 
         // Custom key binding
         KeyBinding.Category CATEGORY = new KeyBinding.Category(
@@ -57,13 +68,15 @@ public class BetterAutoFishingClient implements ClientModInitializer {
 
         // Toggle the mod active state when the toggle keybind is pressed
         while (toggleActiveKey.wasPressed()) {
-            ConfigManager.setActive(!ConfigManager.getActive());
+            config.active = !config.active;
+            AutoConfig.getConfigHolder(ModConfig.class).save();
+
             Text activatedMessage = Text.literal("Better Auto Fishing ").append(Text.literal("activated").formatted(Formatting.GREEN));
             Text deactivatedMessage = Text.literal("Better Auto Fishing ").append(Text.literal("deactivated").formatted(Formatting.RED));
-            Utils.sendActionBarMessage(client, ConfigManager.getActive() ? activatedMessage : deactivatedMessage);
+            Utils.sendActionBarMessage(client, config.active ? activatedMessage : deactivatedMessage);
         }
 
-        if (!ConfigManager.getActive()) { // If the mod is inactive, do nothing
+        if (!config.active) { // If the mod is inactive, do nothing
             resetState();
             return;
         }
@@ -82,6 +95,7 @@ public class BetterAutoFishingClient implements ClientModInitializer {
                         tickCounter = 0;
                         //Utils.sendDebugChatMessage(player, "Caught fish");
                         //Utils.sendDebugChatMessage(player, "Current state: " + currentState);
+                        setReelDelay(player, client); // When a fish is on the line, decide on the reel delay
                     }
                 }
                 break;
@@ -96,13 +110,14 @@ public class BetterAutoFishingClient implements ClientModInitializer {
                 }
 
                 tickCounter++; // Count up to the reel delay, then reel in
-                Utils.sendDebugChatMessage(player, "Reel counter: " + tickCounter);
-                if (tickCounter >= ConfigManager.getReelDelay()) {
+                //Utils.sendDebugChatMessage(player, "Reel counter: " + tickCounter);
+                if (tickCounter >= delayValue) {
                     reelIn(player, client);
                     //Utils.sendDebugChatMessage(player, "Auto reeled in");
                     currentState = AutoFishState.WAITING_FOR_CLEAR;
                     //Utils.sendDebugChatMessage(player, "Current state: " + currentState);
                     tickCounter = 0;
+                    setCastDelay(player, client); // After the reel in happens, decide how long the cast delay will be
                 }
                 break;
 
@@ -129,8 +144,8 @@ public class BetterAutoFishingClient implements ClientModInitializer {
                 }
 
                 tickCounter++; // Count up to the cast delay, then cast
-                Utils.sendDebugChatMessage(player, "Cast counter: " + tickCounter);
-                if (tickCounter >= ConfigManager.getCastDelay()) {
+                //Utils.sendDebugChatMessage(player, "Cast counter: " + tickCounter);
+                if (tickCounter >= delayValue) {
                     castRod(player, client);
                     //Utils.sendDebugChatMessage(player, "Auto cast");
                     resetState();
@@ -158,5 +173,36 @@ public class BetterAutoFishingClient implements ClientModInitializer {
             player.swingHand(Hand.MAIN_HAND);
             client.interactionManager.interactItem(player, Hand.MAIN_HAND);
         }
+    }
+
+    private void setReelDelay(PlayerEntity player, MinecraftClient client) {
+        if (config.randomizeDelays != null && config.randomizeDelays.enableRandomReelDelay) {
+            if (config.randomizeDelays.reelDelayMax < config.randomizeDelays.reelDelayMin) {
+                disableModWithError(player, client, "Max Reel Delay cannot be less than Min Reel Delay!");
+                return;
+            }
+            delayValue = config.randomizeDelays.reelDelayMin + RANDOM.nextInt(config.randomizeDelays.reelDelayMax - config.randomizeDelays.reelDelayMin + 1);
+        } else {
+            delayValue = config.reelDelay;
+        }
+    }
+
+    private void setCastDelay(PlayerEntity player, MinecraftClient client) {
+        if (config.randomizeDelays != null && config.randomizeDelays.enableRandomCastDelay) {
+            if (config.randomizeDelays.castDelayMax < config.randomizeDelays.castDelayMin) {
+                disableModWithError(player, client, "Max Cast Delay cannot be less than Min Cast Delay!");
+                return;
+            }
+            delayValue = config.randomizeDelays.castDelayMin + RANDOM.nextInt(config.randomizeDelays.castDelayMax - config.randomizeDelays.castDelayMin + 1);
+        } else {
+            delayValue = config.castDelay;
+        }
+    }
+
+    private void disableModWithError(PlayerEntity player, MinecraftClient client, String error) {
+        Utils.sendErrorMessage(player, error);
+        config.active = false;
+        Utils.sendActionBarMessage(client, Text.literal("Better Auto Fishing ").append(Text.literal("deactivated").formatted(Formatting.RED)));
+        resetState();
     }
 }

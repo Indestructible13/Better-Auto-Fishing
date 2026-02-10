@@ -1,7 +1,7 @@
 TODO: Stuff I would like to add in the future
- - Improve config screen to be dynamic and prettier (Use Cloth Config)
- - Set hard upper and lower limits on reel and cast delays
  - Option to notify player of what was caught
- - Add option to have random reel and cast delay between configurable upper and lower bounds
+ - Rod break protection
+ - Auto-swap to new rod
  - Open water detection and warnings
  - Statistics screen to track fish and items caught using the mod (global and per world)
+ - Table showing % chances items from fishing based on current rod enchantments
