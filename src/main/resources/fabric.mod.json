@@ -17,7 +17,7 @@
       "com.indestructible13.better_auto_fishing.Better_auto_fishing"
     ],
     "modmenu": [
-      "com.indestructible13.better_auto_fishing.mods.ModMenuIntegration"
+      "com.indestructible13.better_auto_fishing.config.ModMenuIntegration"
     ]
   },
   "mixins": [
@@ -30,7 +30,8 @@
   "depends": {
     "fabricloader": ">=${loader_version}",
     "fabric-api": "*",
-    "minecraft": "${minecraft_version}"
+    "minecraft": "${minecraft_version}",
+    "cloth-config": "${cloth_config_version}"
   },
   "suggests": {
     "modmenu": "*"
