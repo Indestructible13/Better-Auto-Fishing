@@ -95,7 +95,8 @@ public class BetterAutoFishingClient implements ClientModInitializer {
 
         // Do stuff when I press the test key
         while (testKey.wasPressed()) {
-            boolean protect = protectRod();
+            //boolean protect = protectRod();
+            System.out.println("Test key was pressed");
         }
 
         if (!config.active) { // If the mod is inactive, do nothing
@@ -243,6 +244,6 @@ public class BetterAutoFishingClient implements ClientModInitializer {
         ItemStack handContent = player.getMainHandStack();
         if (!(handContent.getItem() instanceof FishingRodItem)) { return false; } // Not holding a fishing rod
         int rodDurability = handContent.getMaxDamage() - handContent.getDamage();
-        return (rodDurability <= config.rodBreakProtectionThreshold);
+        return (rodDurability <= config.extraOptions.rodBreakProtectionThreshold);
     }
 }

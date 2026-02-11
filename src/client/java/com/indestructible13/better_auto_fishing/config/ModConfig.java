@@ -16,10 +16,6 @@ public class ModConfig implements ConfigData {
     @ConfigEntry.BoundedDiscrete(min = 1, max = 100)
     public int castDelay = 20; // Time in ticks to wait before casting the rod
 
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.BoundedDiscrete(min = 0, max = 64)
-    public int rodBreakProtectionThreshold = 3; // Stop using the rod at this durability threshold
-
     @ConfigEntry.Gui.CollapsibleObject
     public RandomizeDelays randomizeDelays = new RandomizeDelays();
 
@@ -41,5 +37,24 @@ public class ModConfig implements ConfigData {
 
         @ConfigEntry.BoundedDiscrete(min = 1, max = 100)
         public int castDelayMax = 30;
+    }
+
+    @ConfigEntry.Gui.CollapsibleObject
+    public ExtraOptions extraOptions = new ExtraOptions();
+
+    public static class ExtraOptions {
+
+        @ConfigEntry.Gui.Tooltip
+        @ConfigEntry.BoundedDiscrete(min = 0, max = 64)
+        public int rodBreakProtectionThreshold = 3; // Stop using the rod at this durability threshold
+
+        @ConfigEntry.Gui.Tooltip
+        public boolean autoSwap = false;
+
+        @ConfigEntry.Gui.Tooltip
+        public boolean openWaterDetection = false;
+
+        @ConfigEntry.Gui.Tooltip
+        public boolean catchNotifications = false;
     }
 }
