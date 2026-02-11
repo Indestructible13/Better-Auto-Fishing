@@ -53,8 +53,5 @@ public class ModConfig implements ConfigData {
 
         @ConfigEntry.Gui.Tooltip
         public boolean openWaterDetection = false;
-
-        @ConfigEntry.Gui.Tooltip
-        public boolean catchNotifications = false;
     }
 }

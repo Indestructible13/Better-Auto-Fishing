@@ -21,7 +21,5 @@
   "text.autoconfig.better_auto_fishing.option.extraOptions.autoSwap": "Auto Swap Rods",
   "text.autoconfig.better_auto_fishing.option.extraOptions.autoSwap.@Tooltip": "Searches inventory for rods with durability and automatically swaps to them\nwhen the current rod reaches the break protection threshold\n(Not implemented yet)",
   "text.autoconfig.better_auto_fishing.option.extraOptions.openWaterDetection": "Open Water Detection",
-  "text.autoconfig.better_auto_fishing.option.extraOptions.openWaterDetection.@Tooltip": "Sends a warning if you are not fishing in open water\n(Not implemented yet)",
-  "text.autoconfig.better_auto_fishing.option.extraOptions.catchNotifications": "Catch Notifications",
-  "text.autoconfig.better_auto_fishing.option.extraOptions.catchNotifications.@Tooltip": "Notifies you of what item was caught on each reel in\n(Not implemented yet)"
+  "text.autoconfig.better_auto_fishing.option.extraOptions.openWaterDetection.@Tooltip": "Sends a warning if you are not fishing in open water\n(Not implemented yet)"
 }
