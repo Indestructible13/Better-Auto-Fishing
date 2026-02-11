@@ -80,8 +80,9 @@ public class BetterAutoFishingClient implements ClientModInitializer {
     private void onTick(MinecraftClient client) {
         this.client = client;
         this.player = client.player;
-
         if (player == null) return;
+
+        FishingBobberEntity bobber = player.fishHook;
 
         // Toggle the mod active state when the toggle keybind is pressed
         while (toggleActiveKey.wasPressed()) {
@@ -103,8 +104,6 @@ public class BetterAutoFishingClient implements ClientModInitializer {
             resetState();
             return;
         }
-
-        FishingBobberEntity bobber = player.fishHook;
 
         switch (currentState) {
             case IDLE:
