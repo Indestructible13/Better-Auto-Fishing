@@ -12,6 +12,8 @@ import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.FishingBobberEntity;
 import com.indestructible13.better_auto_fishing.mixin.client.FishingBobberEntityAccessor;
+import net.minecraft.item.FishingRodItem;
+import net.minecraft.item.ItemStack;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -37,6 +39,7 @@ public class BetterAutoFishingClient implements ClientModInitializer {
     private int delayValue = 0;
     private static final Random RANDOM = new Random();
     private KeyBinding toggleActiveKey;
+    private KeyBinding testKey;
 
     private MinecraftClient client;
     private PlayerEntity player;
@@ -63,6 +66,15 @@ public class BetterAutoFishingClient implements ClientModInitializer {
                         GLFW.GLFW_KEY_B, // The GLFW keycode of the key.
                         CATEGORY // The category of the mapping.
                 ));
+
+        // Custom key binding for testing
+        testKey = KeyBindingHelper.registerKeyBinding(
+                new KeyBinding(
+                        "key.better_auto_fishing.test", // The translation key for the key mapping.
+                        InputUtil.Type.KEYSYM, // The type of the keybinding; KEYSYM for keyboard, MOUSE for mouse.
+                        GLFW.GLFW_KEY_BACKSLASH, // The GLFW keycode of the key.
+                        CATEGORY // The category of the mapping.
+                ));
     }
 
     private void onTick(MinecraftClient client) {
@@ -79,6 +91,11 @@ public class BetterAutoFishingClient implements ClientModInitializer {
             Text activatedMessage = Text.literal("Better Auto Fishing ").append(Text.literal("activated").formatted(Formatting.GREEN));
             Text deactivatedMessage = Text.literal("Better Auto Fishing ").append(Text.literal("deactivated").formatted(Formatting.RED));
             Utils.sendActionBarMessage(client, config.active ? activatedMessage : deactivatedMessage);
+        }
+
+        // Do stuff when I press the test key
+        while (testKey.wasPressed()) {
+            boolean protect = protectRod();
         }
 
         if (!config.active) { // If the mod is inactive, do nothing
@@ -117,6 +134,11 @@ public class BetterAutoFishingClient implements ClientModInitializer {
                 tickCounter++; // Count up to the reel delay, then reel in
                 //Utils.sendDebugChatMessage(player, "Reel counter: " + tickCounter);
                 if (tickCounter >= delayValue) {
+                    if (protectRod()) {
+                        Utils.sendActionBarMessage(client, Text.literal("Rod break protection activated!"));
+                        resetState();
+                        return;
+                    }
                     reelIn();
                     //Utils.sendDebugChatMessage(player, "Auto reeled in");
                     currentState = AutoFishState.WAITING_FOR_CLEAR;
@@ -151,6 +173,11 @@ public class BetterAutoFishingClient implements ClientModInitializer {
                 tickCounter++; // Count up to the cast delay, then cast
                 //Utils.sendDebugChatMessage(player, "Cast counter: " + tickCounter);
                 if (tickCounter >= delayValue) {
+                    if (protectRod()) {
+                        Utils.sendActionBarMessage(client, Text.literal("Rod break protection activated!"));
+                        resetState();
+                        return;
+                    }
                     castRod();
                     //Utils.sendDebugChatMessage(player, "Auto cast");
                     resetState();
@@ -174,7 +201,7 @@ public class BetterAutoFishingClient implements ClientModInitializer {
     }
 
     private void castRod() {
-        if (player != null && client.interactionManager != null) {
+        if (player != null && client.interactionManager != null && !protectRod()) {
             player.swingHand(Hand.MAIN_HAND);
             client.interactionManager.interactItem(player, Hand.MAIN_HAND);
         }
@@ -209,5 +236,13 @@ public class BetterAutoFishingClient implements ClientModInitializer {
         config.active = false;
         Utils.sendActionBarMessage(client, Text.literal("Better Auto Fishing ").append(Text.literal("deactivated").formatted(Formatting.RED)));
         resetState();
+    }
+
+    // Returns true if the rod is at or below the rod break protection limit
+    private boolean protectRod() {
+        ItemStack handContent = player.getMainHandStack();
+        if (!(handContent.getItem() instanceof FishingRodItem)) { return false; } // Not holding a fishing rod
+        int rodDurability = handContent.getMaxDamage() - handContent.getDamage();
+        return (rodDurability <= config.rodBreakProtectionThreshold);
     }
 }

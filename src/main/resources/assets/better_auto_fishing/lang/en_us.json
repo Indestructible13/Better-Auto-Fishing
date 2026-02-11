@@ -7,6 +7,8 @@
   "text.autoconfig.better_auto_fishing.option.active.@Tooltip": "Can be toggled in game using the Toggle Active key (\"B\" by default)",
   "text.autoconfig.better_auto_fishing.option.reelDelay": "Reel Delay (ticks)",
   "text.autoconfig.better_auto_fishing.option.castDelay": "Cast Delay (ticks)",
+  "text.autoconfig.better_auto_fishing.option.rodBreakProtectionThreshold": "Break Protection Threshold",
+  "text.autoconfig.better_auto_fishing.option.rodBreakProtectionThreshold.@Tooltip": "Will not reel or cast the rod if at or below this durability\nSet to 0 to disable",
   "text.autoconfig.better_auto_fishing.option.randomizeDelays": "Randomize Delays",
   "text.autoconfig.better_auto_fishing.option.randomizeDelays.enableRandomReelDelay": "Enable Random Reel Delay",
   "text.autoconfig.better_auto_fishing.option.randomizeDelays.enableRandomReelDelay.@Tooltip": "If enabled, overrides the normal Reel Delay value",

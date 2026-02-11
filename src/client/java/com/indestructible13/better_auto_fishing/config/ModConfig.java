@@ -7,6 +7,7 @@ import me.shedaniel.autoconfig.annotation.ConfigEntry;
 @Config(name = "better_auto_fishing")
 public class ModConfig implements ConfigData {
 
+    @ConfigEntry.Gui.Tooltip
     public boolean active = true;
 
     @ConfigEntry.BoundedDiscrete(min = 1, max = 40)
@@ -15,10 +16,15 @@ public class ModConfig implements ConfigData {
     @ConfigEntry.BoundedDiscrete(min = 1, max = 100)
     public int castDelay = 20; // Time in ticks to wait before casting the rod
 
+    @ConfigEntry.Gui.Tooltip
+    @ConfigEntry.BoundedDiscrete(min = 0, max = 64)
+    public int rodBreakProtectionThreshold = 3; // Stop using the rod at this durability threshold
+
     @ConfigEntry.Gui.CollapsibleObject
     public RandomizeDelays randomizeDelays = new RandomizeDelays();
 
     public static class RandomizeDelays {
+        @ConfigEntry.Gui.Tooltip
         public boolean enableRandomReelDelay = false;
 
         @ConfigEntry.BoundedDiscrete(min = 1, max = 40)
@@ -27,6 +33,7 @@ public class ModConfig implements ConfigData {
         @ConfigEntry.BoundedDiscrete(min = 1, max = 40)
         public int reelDelayMax = 15;
 
+        @ConfigEntry.Gui.Tooltip
         public boolean enableRandomCastDelay = false;
 
         @ConfigEntry.BoundedDiscrete(min = 1, max = 100)
