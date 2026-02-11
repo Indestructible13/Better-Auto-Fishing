@@ -11,6 +11,6 @@ public class BetterAutoFishingClientMixin {
     @Inject(at = @At("HEAD"), method = "run")
     private void init(CallbackInfo info) {
         // This code is injected into the start of MinecraftClient.run()V
-        System.out.println("Successful injection of BetterAutoFishingClientMixin!");
+        //System.out.println("Successful injection of BetterAutoFishingClientMixin!");
     }
 }
