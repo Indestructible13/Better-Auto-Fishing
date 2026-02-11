@@ -7,7 +7,7 @@ import net.minecraft.util.Formatting;
 
 public class Utils {
     public static void sendChatMessage(PlayerEntity player, String message) {
-        player.sendMessage(Text.of("[Better Auto Fishing]" + message), false);
+        player.sendMessage(Text.of("[Better Auto Fishing] " + message), false);
     }
 
     public static void sendErrorMessage(PlayerEntity player, String message) {
