@@ -21,12 +21,15 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Random;
 
 public class BetterAutoFishingClient implements ClientModInitializer {
     public static final String MOD_ID = "better_auto_fishing";
     public static ModConfig config;
+    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     private enum AutoFishState {
         IDLE,
@@ -47,7 +50,7 @@ public class BetterAutoFishingClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        System.out.println("Better Auto Fishing mod initializing...");
+        LOGGER.info("Better Auto Fishing mod initializing...");
 
         ClientTickEvents.END_CLIENT_TICK.register(this::onTick);
         AutoConfig.register(ModConfig.class, GsonConfigSerializer::new);
