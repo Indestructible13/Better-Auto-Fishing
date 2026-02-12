@@ -19,7 +19,7 @@
   "text.autoconfig.better_auto_fishing.option.extraOptions.rodBreakProtectionThreshold": "Break Protection Threshold",
   "text.autoconfig.better_auto_fishing.option.extraOptions.rodBreakProtectionThreshold.@Tooltip": "Will not reel or cast the rod if at or below this durability\nSet to 0 to disable",
   "text.autoconfig.better_auto_fishing.option.extraOptions.autoSwap": "Auto Swap Rods",
-  "text.autoconfig.better_auto_fishing.option.extraOptions.autoSwap.@Tooltip": "Searches inventory for rods with durability and automatically swaps to them\nwhen the current rod reaches the break protection threshold\n(Not implemented yet)",
+  "text.autoconfig.better_auto_fishing.option.extraOptions.autoSwap.@Tooltip": "Searches inventory for rods with durability and automatically swaps to them\nwhen the current rod reaches the break protection threshold",
   "text.autoconfig.better_auto_fishing.option.extraOptions.openWaterDetection": "Open Water Detection",
   "text.autoconfig.better_auto_fishing.option.extraOptions.openWaterDetection.@Tooltip": "Sends a warning if you are not fishing in open water\n(Not implemented yet)"
 }
