@@ -10,6 +10,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.entity.projectile.FishingBobberEntity;
 import com.indestructible13.better_auto_fishing.mixin.client.FishingBobberEntityAccessor;
 import net.minecraft.item.FishingRodItem;
@@ -96,8 +97,8 @@ public class BetterAutoFishingClient implements ClientModInitializer {
 
         // Do stuff when I press the test key
         while (testKey.wasPressed()) {
-            //boolean protect = protectRod();
             System.out.println("Test key was pressed");
+            swapFishingRod();
         }
 
         if (!config.active) { // If the mod is inactive, do nothing
@@ -137,6 +138,7 @@ public class BetterAutoFishingClient implements ClientModInitializer {
                     if (protectRod()) {
                         Utils.sendActionBarMessage(client, Text.literal("Rod break protection activated!"));
                         resetState();
+                        if (config.extraOptions.autoSwap) { swapFishingRod(); } // If the Auto Swap feature is enabled, swap rods when the break protection activates
                         return;
                     }
                     reelIn();
@@ -176,7 +178,11 @@ public class BetterAutoFishingClient implements ClientModInitializer {
                     if (protectRod()) {
                         Utils.sendActionBarMessage(client, Text.literal("Rod break protection activated!"));
                         resetState();
-                        return;
+                        if (config.extraOptions.autoSwap) { // If the Auto Swap feature is enabled, swap rods when the break protection activates
+                            if (!swapFishingRod()) { return; } // Only return if the swap fails, otherwise just cast again because you have a new rod
+                        } else {
+                            return; // If the Auto Swap feature is off, then just return like normal
+                        }
                     }
                     castRod();
                     //Utils.sendDebugChatMessage(player, "Auto cast");
@@ -201,7 +207,7 @@ public class BetterAutoFishingClient implements ClientModInitializer {
     }
 
     private void castRod() {
-        if (player != null && client.interactionManager != null && !protectRod()) {
+        if (player != null && client.interactionManager != null) {
             player.swingHand(Hand.MAIN_HAND);
             client.interactionManager.interactItem(player, Hand.MAIN_HAND);
         }
@@ -244,5 +250,29 @@ public class BetterAutoFishingClient implements ClientModInitializer {
         if (!(handContent.getItem() instanceof FishingRodItem)) { return false; } // Not holding a fishing rod
         int rodDurability = handContent.getMaxDamage() - handContent.getDamage();
         return (rodDurability <= config.extraOptions.rodBreakProtectionThreshold);
+    }
+
+    // Searches the player's hotbar, swaps to a hotbar slot that contains a valid fishing rod
+    private boolean swapFishingRod() {
+        PlayerInventory inventory = player.getInventory();
+
+        // Loop through hotbar slots, find a slot with a valid fishing rod
+        for (int slot = 0; slot <= 8; slot++) {
+            ItemStack itemStack = inventory.getStack(slot);
+            //Utils.sendDebugChatMessage(player, String.format("Inventory slot %s contains %s", slot, itemStack.toString()));
+
+            if (itemStack.getItem() instanceof FishingRodItem) {
+                // Verify the rod's durability
+                int durability = itemStack.getMaxDamage() - itemStack.getDamage();
+                if (durability > config.extraOptions.rodBreakProtectionThreshold) {
+                    inventory.setSelectedSlot(slot);
+                    return true; // Return true if the swap was successful
+                }
+            }
+        }
+
+        // If no valid rod is found, say so
+        Utils.sendActionBarMessage(client, Text.literal("No valid fishing rods in your hotbar to swap to!"));
+        return false;
     }
 }
