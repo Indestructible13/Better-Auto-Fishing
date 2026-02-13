@@ -6,6 +6,8 @@ import me.shedaniel.autoconfig.serializer.GsonConfigSerializer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
@@ -13,13 +15,17 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.entity.projectile.FishingBobberEntity;
 import com.indestructible13.better_auto_fishing.mixin.client.FishingBobberEntityAccessor;
+import net.minecraft.fluid.FluidState;
 import net.minecraft.item.FishingRodItem;
 import net.minecraft.item.ItemStack;
+import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +39,8 @@ public class BetterAutoFishingClient implements ClientModInitializer {
 
     private enum AutoFishState {
         IDLE,
+        CHECKING_WATER, // Used to check if fishing in open water
+        WAITING_FOR_FISH,
         REELING,
         WAITING_FOR_CLEAR,
         CASTING
@@ -100,8 +108,36 @@ public class BetterAutoFishingClient implements ClientModInitializer {
 
         // Do stuff when I press the test key
         while (testKey.wasPressed()) {
-            System.out.println("Test key was pressed");
-            swapFishingRod();
+            LOGGER.info("Test key was pressed");
+
+            if (bobber == null) {
+                Utils.sendDebugChatMessage(player, "bobber is null");
+                return;
+            }
+
+            // Tell me what block the bobber is in
+            World world = bobber.getEntityWorld();
+            BlockPos bobberPos = bobber.getBlockPos();
+            BlockState state = world.getBlockState(bobberPos);
+            //Utils.sendDebugChatMessage(player, state.getBlock().toString());
+            Utils.sendDebugChatMessage(player, "=== Test =====================================");
+            Utils.sendDebugChatMessage(player, String.format("In water: %s", state.isOf(Blocks.WATER)));
+            boolean inSourceBlock = false;
+            if (state.isOf(Blocks.WATER)) {
+                FluidState fluidState = state.getFluidState();
+                if (fluidState.isIn(FluidTags.WATER) && fluidState.isStill()) {
+                    inSourceBlock = true;
+                }
+            }
+            Utils.sendDebugChatMessage(player, String.format("In source block: %s", inSourceBlock));
+            Utils.sendDebugChatMessage(player, String.format("In bubble column: %s", state.isOf(Blocks.BUBBLE_COLUMN)));
+            boolean inWaterloggedBlockWithoutCollision = false;
+            if (state.getFluidState().isIn(FluidTags.WATER)) {
+                if (state.getCollisionShape(world, bobberPos).isEmpty()) {
+                    inWaterloggedBlockWithoutCollision = true;
+                }
+            }
+            Utils.sendDebugChatMessage(player, String.format("In collision-less waterlogged block: %s", inWaterloggedBlockWithoutCollision));
         }
 
         if (!config.active) { // If the mod is inactive, do nothing
@@ -114,6 +150,35 @@ public class BetterAutoFishingClient implements ClientModInitializer {
                 // While the bobber is null in the IDLE state, do nothing
                 // If the bobber appears while in IDLE, it means the player cast the rod
                 if (bobber != null) {
+                    if (config.extraOptions.openWaterDetection) {
+                        currentState = AutoFishState.CHECKING_WATER;
+                    } else {
+                        currentState = AutoFishState.WAITING_FOR_FISH;
+                    }
+                }
+                break;
+
+            case CHECKING_WATER:
+                if (bobber != null) {
+                    // Wait for the bobber to hit the water before attempting to check
+                    World world = bobber.getEntityWorld();
+                    BlockPos bobberPos = bobber.getBlockPos();
+                    BlockState state = world.getBlockState(bobberPos);
+                    // Bobber should be in a valid water layer type block
+                    if (getBlockLayerType(state, world, bobberPos) != LayerType.WATER_LAYER) { return; }
+
+                    if (!isOpenWater(bobber)) {
+                        Utils.sendActionBarMessage(client, Text.literal("You are not fishing in open water!"));
+                    }
+                } else { // Bobber is null, it must have been reeled in manually again
+                    resetState();
+                    return;
+                }
+                currentState = AutoFishState.WAITING_FOR_FISH;
+                break;
+
+            case WAITING_FOR_FISH:
+                if (bobber != null) {
                     // Use the Accessor Mixin to check the private caughtFish boolean
                     boolean caughtFish = ((FishingBobberEntityAccessor) bobber).getCaughtFish();
                     if (caughtFish) {
@@ -123,6 +188,8 @@ public class BetterAutoFishingClient implements ClientModInitializer {
                         //Utils.sendDebugChatMessage(player, "Current state: " + currentState);
                         setReelDelay(); // When a fish is on the line, decide on the reel delay
                     }
+                } else { // Bobber is null, it must have been reeled in manually again
+                    resetState();
                 }
                 break;
 
@@ -277,5 +344,92 @@ public class BetterAutoFishingClient implements ClientModInitializer {
         // If no valid rod is found, say so
         Utils.sendActionBarMessage(client, Text.literal("No valid fishing rods in your hotbar to swap to!"));
         return false;
+    }
+
+    private boolean isOpenWater(FishingBobberEntity bobber) {
+        World world = bobber.getEntityWorld();
+        BlockPos bobberPos = bobber.getBlockPos();
+
+        /*
+         * Check 5x4x5 area around the bobber (2 blocks in each horizontal direction, -1 to +2 vertically)
+         * Each horizontal layer must be entirely one type:
+         * - EITHER: air and lily pads only
+         * - OR: water source blocks, waterlogged blocks without collision, and bubble columns only
+         * Mixing types in a single layer = not open water
+         */
+
+        // Check each of the 4 vertical layers
+        for (int y = -1; y <= 2; y++) {
+            LayerType expectedType = null;
+
+            // Check all horizontal positions in this layer (5x5 grid)
+            for (int x = -2; x <= 2; x++) {
+                for (int z = -2; z <= 2; z++) {
+                    BlockPos checkPos = bobberPos.add(x, y, z);
+                    BlockState state = world.getBlockState(checkPos);
+
+                    LayerType blockType = getBlockLayerType(state, world, checkPos);
+
+                    // Invalid block type in this layer, so the layer is invalid
+                    if (blockType == LayerType.INVALID) {
+                        return false;
+                    }
+
+                    // Determine what type this layer should be by checking the first block
+                    if (expectedType == null) {
+                        expectedType = blockType;
+                    }
+
+                    // This block doesn't match the layer type!
+                    if (blockType != expectedType) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        return true; // All layers are consistent, this is open water!
+    }
+
+    /**
+     * Determines what layer type a block belongs to
+     */
+    private LayerType getBlockLayerType(BlockState state, World world, BlockPos pos) {
+        // Air or lily pad = AIR_LAYER type
+        if (state.isAir() || state.isOf(Blocks.LILY_PAD)) {
+            return LayerType.AIR_LAYER;
+        }
+
+        // Water source block = WATER_LAYER type
+        if (state.isOf(Blocks.WATER)) {
+            FluidState fluidState = state.getFluidState();
+            if (fluidState.isIn(FluidTags.WATER) && fluidState.isStill()) {
+                return LayerType.WATER_LAYER;
+            }
+        }
+
+        // Bubble column = WATER_LAYER type
+        if (state.isOf(Blocks.BUBBLE_COLUMN)) {
+            return LayerType.WATER_LAYER;
+        }
+
+        // Waterlogged block without collision (signs, kelp, coral, etc.) = WATER_LAYER type
+        if (state.getFluidState().isIn(FluidTags.WATER)) {
+            if (state.getCollisionShape(world, pos).isEmpty()) {
+                return LayerType.WATER_LAYER;
+            }
+        }
+
+        // Anything else is invalid
+        return LayerType.INVALID;
+    }
+
+    /**
+     * Enum to categorize blocks into layer types
+     */
+    private enum LayerType {
+        AIR_LAYER,    // Air and lily pads
+        WATER_LAYER,  // Water, waterlogged blocks, bubble columns
+        INVALID       // Anything else (dirt, stone, flowing water, etc.)
     }
 }

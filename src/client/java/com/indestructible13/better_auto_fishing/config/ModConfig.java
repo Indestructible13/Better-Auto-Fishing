@@ -52,6 +52,6 @@ public class ModConfig implements ConfigData {
         public boolean autoSwap = false;
 
         @ConfigEntry.Gui.Tooltip
-        public boolean openWaterDetection = false;
+        public boolean openWaterDetection = true;
     }
 }
