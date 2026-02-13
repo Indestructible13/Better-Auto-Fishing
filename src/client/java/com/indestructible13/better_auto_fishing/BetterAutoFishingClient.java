@@ -29,7 +29,7 @@ import java.util.Random;
 public class BetterAutoFishingClient implements ClientModInitializer {
     public static final String MOD_ID = "better_auto_fishing";
     public static ModConfig config;
-    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+    public static final Logger LOGGER = LoggerFactory.getLogger("Better Auto Fishing");
 
     private enum AutoFishState {
         IDLE,

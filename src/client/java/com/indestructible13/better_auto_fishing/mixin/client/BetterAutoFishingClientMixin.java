@@ -13,9 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(MinecraftClient.class)
 public class BetterAutoFishingClientMixin {
     @Unique
-    private static final String MOD_ID = "better_auto_fishing";
-    @Unique
-    private static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+    private static final Logger LOGGER = LoggerFactory.getLogger("Better Auto Fishing");
 
     @Inject(at = @At("HEAD"), method = "run")
     private void init(CallbackInfo info) {
