@@ -17,6 +17,7 @@ public class ModConfig implements ConfigData {
     public int castDelay = 20; // Time in ticks to wait before casting the rod
 
     @ConfigEntry.Gui.CollapsibleObject
+    @ConfigEntry.Gui.Tooltip
     public RandomizeDelays randomizeDelays = new RandomizeDelays();
 
     public static class RandomizeDelays {
@@ -53,5 +54,8 @@ public class ModConfig implements ConfigData {
 
         @ConfigEntry.Gui.Tooltip
         public boolean openWaterDetection = true;
+
+        @ConfigEntry.Gui.Tooltip
+        public boolean pauseOnGui = false;
     }
 }

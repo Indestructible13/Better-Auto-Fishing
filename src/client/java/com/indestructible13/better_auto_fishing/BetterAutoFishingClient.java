@@ -140,7 +140,10 @@ public class BetterAutoFishingClient implements ClientModInitializer {
             Utils.sendDebugChatMessage(player, String.format("In collision-less waterlogged block: %s", inWaterloggedBlockWithoutCollision));
         }
 
-        if (!config.active) { // If the mod is inactive, do nothing
+        // Reset the state machine and return if either of these conditions are met:
+        // The mod is inactive
+        // pauseOnGui setting is set to true and a GUI is open
+        if (!config.active || (config.extraOptions.pauseOnGui && client.currentScreen != null)) {
             resetState();
             return;
         }

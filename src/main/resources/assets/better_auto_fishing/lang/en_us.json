@@ -21,5 +21,7 @@
   "text.autoconfig.better_auto_fishing.option.extraOptions.autoSwap": "Auto Swap Rods",
   "text.autoconfig.better_auto_fishing.option.extraOptions.autoSwap.@Tooltip": "Searches inventory for rods with durability and automatically swaps to them\nwhen the current rod reaches the break protection threshold",
   "text.autoconfig.better_auto_fishing.option.extraOptions.openWaterDetection": "Open Water Detection",
-  "text.autoconfig.better_auto_fishing.option.extraOptions.openWaterDetection.@Tooltip": "Sends a warning if you are not fishing in open water"
+  "text.autoconfig.better_auto_fishing.option.extraOptions.openWaterDetection.@Tooltip": "Sends a warning if you are not fishing in open water",
+  "text.autoconfig.better_auto_fishing.option.extraOptions.pauseOnGui": "Pause on GUI Open",
+  "text.autoconfig.better_auto_fishing.option.extraOptions.pauseOnGui.@Tooltip": "Pauses fishing while a GUI (e.g. chest, inventory, chat, etc.) is open"
 }
