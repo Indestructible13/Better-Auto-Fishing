@@ -4,7 +4,7 @@
   "version": "${version}",
   "name": "Better Auto Fishing",
   "description": "I didn't like any of the auto fishing mods out there, so I made my own.",
-  "authors": [],
+  "authors": ["Indestructible13 aka King_Inde_"],
   "contact": {},
   "license": "MIT",
   "icon": "assets/icon.png",
