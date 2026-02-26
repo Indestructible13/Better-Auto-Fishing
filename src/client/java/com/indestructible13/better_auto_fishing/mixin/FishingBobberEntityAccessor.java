@@ -1,4 +1,4 @@
-package com.indestructible13.better_auto_fishing.mixin.client;
+package com.indestructible13.better_auto_fishing.mixin;
 
 import net.minecraft.entity.projectile.FishingBobberEntity;
 import org.spongepowered.asm.mixin.Mixin;

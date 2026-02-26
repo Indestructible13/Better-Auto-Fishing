@@ -14,7 +14,7 @@ import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.entity.projectile.FishingBobberEntity;
-import com.indestructible13.better_auto_fishing.mixin.client.FishingBobberEntityAccessor;
+import com.indestructible13.better_auto_fishing.mixin.FishingBobberEntityAccessor;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.item.FishingRodItem;
 import net.minecraft.item.ItemStack;
