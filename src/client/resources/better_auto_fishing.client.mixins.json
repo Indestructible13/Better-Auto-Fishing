@@ -4,7 +4,6 @@
   "package": "com.indestructible13.better_auto_fishing.mixin.client",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "BetterAutoFishingClientMixin",
     "FishingBobberEntityAccessor"
   ],
   "injectors": {
