@@ -6,6 +6,7 @@ import me.shedaniel.autoconfig.serializer.GsonConfigSerializer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
@@ -87,6 +88,17 @@ public class BetterAutoFishingClient implements ClientModInitializer {
                         GLFW.GLFW_KEY_BACKSLASH, // The GLFW keycode of the key.
                         CATEGORY // The category of the mapping.
                 ));
+
+        // Register custom HUD renderer
+        LootTableRenderer lootTableRenderer = new LootTableRenderer();
+        HudElementRegistry.addLast(
+                Identifier.of(MOD_ID, "test_overlay"),
+                (drawContext, tickDeltaManager) -> {
+                    if (config.extraOptions.showCatchTable) {
+                        lootTableRenderer.renderTable(drawContext);
+                    }
+                }
+        );
     }
 
     private void onTick(MinecraftClient client) {

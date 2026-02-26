@@ -57,5 +57,24 @@ public class ModConfig implements ConfigData {
 
         @ConfigEntry.Gui.Tooltip
         public boolean pauseOnGui = false;
+
+        @ConfigEntry.Gui.Tooltip
+        public boolean showCatchTable = false;
+
+        @ConfigEntry.Gui.Tooltip
+        @ConfigEntry.BoundedDiscrete(min = 0, max = 100)
+        public int tableRootX = 2; // Table will be rooted 2% of the way from the left edge of the screen
+
+        @ConfigEntry.Gui.Tooltip
+        @ConfigEntry.BoundedDiscrete(min = 0, max = 100)
+        public int tableRootY = 2; // Table will be rooted 2% of the way from the top edge of the screen
+
+        @ConfigEntry.Gui.Tooltip
+        @ConfigEntry.BoundedDiscrete(min = 1, max = 100)
+        public int tableScale = 50; // Percentage value the table will be scaled by
+
+        @ConfigEntry.Gui.Tooltip
+        @ConfigEntry.BoundedDiscrete(min = 0, max = 100)
+        public int tableBackgroundOpacity = 20; // %
     }
 }
