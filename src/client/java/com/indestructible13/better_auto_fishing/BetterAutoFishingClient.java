@@ -7,6 +7,7 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
@@ -81,13 +82,16 @@ public class BetterAutoFishingClient implements ClientModInitializer {
                 ));
 
         // Custom key binding for testing
-        testKey = KeyBindingHelper.registerKeyBinding(
-                new KeyBinding(
-                        "key.better_auto_fishing.test", // The translation key for the key mapping.
-                        InputUtil.Type.KEYSYM, // The type of the keybinding; KEYSYM for keyboard, MOUSE for mouse.
-                        GLFW.GLFW_KEY_BACKSLASH, // The GLFW keycode of the key.
-                        CATEGORY // The category of the mapping.
-                ));
+        // Only runs in a dev environment
+        if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
+            testKey = KeyBindingHelper.registerKeyBinding(
+                    new KeyBinding(
+                            "key.better_auto_fishing.test", // The translation key for the key mapping.
+                            InputUtil.Type.KEYSYM, // The type of the keybinding; KEYSYM for keyboard, MOUSE for mouse.
+                            GLFW.GLFW_KEY_BACKSLASH, // The GLFW keycode of the key.
+                            CATEGORY // The category of the mapping.
+                    ));
+        }
 
         // Register custom HUD renderer
         LootTableRenderer lootTableRenderer = new LootTableRenderer();
@@ -119,37 +123,12 @@ public class BetterAutoFishingClient implements ClientModInitializer {
         }
 
         // Do stuff when I press the test key
-        while (testKey.wasPressed()) {
-            LOGGER.info("Test key was pressed");
-
-            if (bobber == null) {
-                Utils.sendDebugChatMessage(player, "bobber is null");
-                return;
+        // Only runs in a dev environment
+        if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
+            while (testKey.wasPressed()) {
+                LOGGER.info("Test key was pressed");
+                Utils.sendDebugChatMessage(player, "Test key was pressed");
             }
-
-            // Tell me what block the bobber is in
-            World world = bobber.getEntityWorld();
-            BlockPos bobberPos = bobber.getBlockPos();
-            BlockState state = world.getBlockState(bobberPos);
-            //Utils.sendDebugChatMessage(player, state.getBlock().toString());
-            Utils.sendDebugChatMessage(player, "=== Test =====================================");
-            Utils.sendDebugChatMessage(player, String.format("In water: %s", state.isOf(Blocks.WATER)));
-            boolean inSourceBlock = false;
-            if (state.isOf(Blocks.WATER)) {
-                FluidState fluidState = state.getFluidState();
-                if (fluidState.isIn(FluidTags.WATER) && fluidState.isStill()) {
-                    inSourceBlock = true;
-                }
-            }
-            Utils.sendDebugChatMessage(player, String.format("In source block: %s", inSourceBlock));
-            Utils.sendDebugChatMessage(player, String.format("In bubble column: %s", state.isOf(Blocks.BUBBLE_COLUMN)));
-            boolean inWaterloggedBlockWithoutCollision = false;
-            if (state.getFluidState().isIn(FluidTags.WATER)) {
-                if (state.getCollisionShape(world, bobberPos).isEmpty()) {
-                    inWaterloggedBlockWithoutCollision = true;
-                }
-            }
-            Utils.sendDebugChatMessage(player, String.format("In collision-less waterlogged block: %s", inWaterloggedBlockWithoutCollision));
         }
 
         // Reset the state machine and return if either of these conditions are met:
