@@ -27,12 +27,12 @@
   "text.autoconfig.better_auto_fishing.option.extraOptions.pauseOnGui.@Tooltip": "Pauses fishing while a GUI (e.g. chest, inventory, chat, etc.) is open",
   "text.autoconfig.better_auto_fishing.option.extraOptions.showFishingLootTable": "Show Fishing Loot Table",
   "text.autoconfig.better_auto_fishing.option.extraOptions.showFishingLootTable.@Tooltip": "Uses the held rod's enchantments to calculate\nthe chances of catching each item",
-  "text.autoconfig.better_auto_fishing.option.extraOptions.tableRootX": "Left Edge % Distance",
-  "text.autoconfig.better_auto_fishing.option.extraOptions.tableRootX.@Tooltip": "% distance from the left edge of the screen (X coordinate plane)",
-  "text.autoconfig.better_auto_fishing.option.extraOptions.tableRootY": "Top Edge % Distance",
-  "text.autoconfig.better_auto_fishing.option.extraOptions.tableRootY.@Tooltip": "% distance from the top edge of the screen (Y coordinate plane)",
   "text.autoconfig.better_auto_fishing.option.extraOptions.tableScale": "Table Scale",
   "text.autoconfig.better_auto_fishing.option.extraOptions.tableScale.@Tooltip": "Slider to control the size of the table",
+  "text.autoconfig.better_auto_fishing.option.extraOptions.tableRootY": "Top Edge % Distance",
+  "text.autoconfig.better_auto_fishing.option.extraOptions.tableRootY.@Tooltip": "% distance from the top edge of the screen (Y coordinate plane)",
+  "text.autoconfig.better_auto_fishing.option.extraOptions.tableRootX": "Left Edge % Distance",
+  "text.autoconfig.better_auto_fishing.option.extraOptions.tableRootX.@Tooltip": "% distance from the left edge of the screen (X coordinate plane)",
   "text.autoconfig.better_auto_fishing.option.extraOptions.tableBackgroundOpacity": "Table Background Opacity",
   "text.autoconfig.better_auto_fishing.option.extraOptions.tableBackgroundOpacity.@Tooltip": "0% opacity makes the table background transparent\n100% opacity gives it a solid black background"
 }
