@@ -199,8 +199,8 @@ public class LootTableRenderer {
         float scale = config.extraOptions.tableScale / 100f;
 
         // Calculate the root position of the table using the screen size and config percentages
-        int rootX = (int)(screenWidth * (config.extraOptions.tableRootX / 100f));
-        int rootY = (int)(screenHeight * (config.extraOptions.tableRootY / 100f));
+        int rootX = (int)((screenWidth * (config.extraOptions.tableRootX / 100f)) / scale);
+        int rootY = (int)((screenHeight * (config.extraOptions.tableRootY / 100f)) / scale);
 
         int rowHeight = 10; // pixels between rows
         int columnWidth = 50;  // pixels between columns
