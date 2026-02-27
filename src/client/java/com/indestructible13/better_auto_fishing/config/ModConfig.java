@@ -59,7 +59,7 @@ public class ModConfig implements ConfigData {
         public boolean pauseOnGui = false;
 
         @ConfigEntry.Gui.Tooltip
-        public boolean showCatchTable = false;
+        public boolean showFishingLootTable = false;
 
         @ConfigEntry.Gui.Tooltip
         @ConfigEntry.BoundedDiscrete(min = 0, max = 100)

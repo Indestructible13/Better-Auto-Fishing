@@ -94,7 +94,7 @@ public class BetterAutoFishingClient implements ClientModInitializer {
         HudElementRegistry.addLast(
                 Identifier.of(MOD_ID, "test_overlay"),
                 (drawContext, tickDeltaManager) -> {
-                    if (config.extraOptions.showCatchTable) {
+                    if (config.extraOptions.showFishingLootTable) {
                         lootTableRenderer.renderTable(drawContext);
                     }
                 }

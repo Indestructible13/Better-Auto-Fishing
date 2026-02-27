@@ -318,7 +318,7 @@ public class LootTableRenderer {
         double categoryChance = category.getWeight(lotsLevel) / 100f;
         double itemChance = subType.getWeight() / 100f;
         BigDecimal roundedValue = new BigDecimal((categoryChance * itemChance) * 100f).setScale(2, RoundingMode.HALF_UP);
-        return roundedValue.toString() + "%";
+        return roundedValue + "%";
     }
 
     private int getLotsLevel(ItemStack handContent) {
