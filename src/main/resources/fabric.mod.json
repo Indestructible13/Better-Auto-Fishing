@@ -3,7 +3,7 @@
   "id": "better_auto_fishing",
   "version": "${version}",
   "name": "Better Auto Fishing",
-  "description": "I didn't like any of the auto fishing mods out there, so I made my own.",
+  "description": "Auto fishing mod with a hotkey to activate/deactivate fishing, open water detection, random reel and cast delays, and more!",
   "authors": ["Indestructible13 aka King_Inde_"],
   "contact": {},
   "license": "MIT",
