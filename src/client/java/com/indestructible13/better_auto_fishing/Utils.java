@@ -21,4 +21,15 @@ public class Utils {
     public static void sendActionBarMessage(MinecraftClient client, Text message) {
         client.inGameHud.setOverlayMessage(message, false);
     }
+
+    public static String numToRomanNumeral(int num) {
+        return switch (num) {
+            case 1 -> "I";
+            case 2 -> "II";
+            case 3 -> "III";
+            case 4 -> "IV";
+            case 5 -> "V";
+            default -> String.valueOf(num); // Fallback for levels like Sharpness VI+
+        };
+    }
 }

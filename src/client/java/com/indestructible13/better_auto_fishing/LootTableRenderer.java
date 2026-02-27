@@ -5,12 +5,23 @@ import me.shedaniel.autoconfig.AutoConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.component.DataComponentTypes;
+import net.minecraft.enchantment.Enchantments;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.FishingRodItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.registry.RegistryKeys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 public class LootTableRenderer {
-    private final MinecraftClient client;
-    private final ModConfig config;
+    private MinecraftClient client;
+    private ModConfig config;
+    private PlayerEntity player;
+    public static final Logger LOGGER = LoggerFactory.getLogger("Better Auto Fishing");
 
     // Item icons - initialized once lazily
     private ItemStack codIcon;
@@ -62,7 +73,7 @@ public class LootTableRenderer {
         leatherIcon = new ItemStack(Items.LEATHER);
         leatherBootsIcon = new ItemStack(Items.LEATHER_BOOTS);
         rottenFleshIcon = new ItemStack(Items.ROTTEN_FLESH);
-        waterBottleIcon = new ItemStack(Items.GLASS_BOTTLE);
+        waterBottleIcon = new ItemStack(Items.POTION);
         tripwireHookIcon = new ItemStack(Items.TRIPWIRE_HOOK);
         stickIcon= new ItemStack(Items.STICK);
         stringIcon = new ItemStack(Items.STRING);
@@ -76,6 +87,7 @@ public class LootTableRenderer {
         JUNK;
 
         private double getWeight(int luckOfTheSeaLevel) {
+            if (luckOfTheSeaLevel == -1) return 0;
             return switch (this) {
                 // Base 85% - 0.15% per level
                 case FISH -> 85.0 - (luckOfTheSeaLevel * 0.15); // Fish chance drops slightly
@@ -112,12 +124,12 @@ public class LootTableRenderer {
     }
 
     private enum TreasureType implements LootItem {
-        BOW(1.0 / 6.0),
-        ENCHANTED_BOOK(1.0 / 6.0),
-        FISHING_ROD(1.0 / 6.0),
-        NAME_TAG(1.0 / 6.0),
-        NAUTILUS_SHELL(1.0 / 6.0),
-        SADDLE(1.0 / 6.0);
+        BOW((1.0 / 6.0) * 100.0), // ~16.67% chance
+        ENCHANTED_BOOK((1.0 / 6.0) * 100.0), // ~16.67% chance
+        FISHING_ROD((1.0 / 6.0) * 100.0), // ~16.67% chance
+        NAME_TAG((1.0 / 6.0) * 100.0), // ~16.67% chance
+        NAUTILUS_SHELL((1.0 / 6.0) * 100.0), // ~16.67% chance
+        SADDLE((1.0 / 6.0) * 100.0); // ~16.67% chance
 
         private final double weight;
 
@@ -132,18 +144,18 @@ public class LootTableRenderer {
     }
 
     private enum JunkType implements LootItem {
-        LILY_PAD(17.0),
-        BONE(10.0),
-        BOWL(10.0),
-        LEATHER(10.0),
-        LEATHER_BOOTS(10.0),
-        ROTTEN_FLESH(10.0),
-        WATER_BOTTLE(10.0),
-        TRIPWIRE_HOOK(10.0),
-        STICK(5.0),
-        STRING_ITEM(5.0),
-        FISHING_ROD(2.0),
-        INK_SAC(1.0);
+        LILY_PAD(17.0), // 17% chance
+        BONE(10.0), // 10% chance
+        BOWL(10.0), // 10% chance
+        LEATHER(10.0), // 10% chance
+        LEATHER_BOOTS(10.0), // 10% chance
+        ROTTEN_FLESH(10.0), // 10% chance
+        WATER_BOTTLE(10.0), // 10% chance
+        TRIPWIRE_HOOK(10.0), // 10% chance
+        STICK(5.0), // 5% chance
+        STRING_ITEM(5.0), // 5% chance
+        FISHING_ROD(2.0), // 2% chance
+        INK_SAC(1.0); // 1% chance
 
         private final double weight;
 
@@ -165,6 +177,17 @@ public class LootTableRenderer {
     // Renders the table showing % chances of each item you can catch
     // based on the enchantments of the held rod
     public void renderTable(DrawContext drawContext) {
+        if (player == null) {
+            player = client.player;
+            return;
+        }
+
+        // Get rod and enchantment info
+        ItemStack handContent = player.getMainHandStack();
+        if (!(handContent.getItem() instanceof FishingRodItem)) { return; } // Don't do anything if not holding a rod
+        int lotsLevel = getLotsLevel(handContent);
+        int lureLevel = getLureLevel(handContent);
+
         // Initialize icons
         initIcons();
 
@@ -182,7 +205,7 @@ public class LootTableRenderer {
         int rowHeight = 10; // pixels between rows
         int columnWidth = 50;  // pixels between columns
         int tableWidth = columnWidth * 3; // For 3 columns
-        int tableHeight = rowHeight * 14; // For 14 rows, 2 for header, and the rest for items
+        int tableHeight = rowHeight * 16; // For 16 rows, 2 for header, 2 for footer, and the rest for items
 
         // Draw with scaling
         drawContext.getMatrices().pushMatrix();
@@ -192,49 +215,56 @@ public class LootTableRenderer {
         int opacity = config.extraOptions.tableBackgroundOpacity;
         int alpha = (int)(opacity / 100f * 255);
         int backgroundColor = (alpha << 24);
-        drawContext.fill(rootX, rootY, rootX + tableWidth, rootY + tableHeight, backgroundColor);
+        drawContext.fill(rootX, rootY - 2, rootX + tableWidth, rootY + tableHeight, backgroundColor);
 
         // Draw header text
-        drawHeaderCell(drawContext, "FISH", String.format("(%s%%)", LootCategory.FISH.getWeight(0)), rootX, rootY, 0, 0, columnWidth, rowHeight * 2 + 2);
-        drawHeaderCell(drawContext, "TREASURE", String.format("(%s%%)", LootCategory.TREASURE.getWeight(0)), rootX, rootY, 1, 0, columnWidth, rowHeight * 2 + 2);
-        drawHeaderCell(drawContext, "JUNK", String.format("(%s%%)", LootCategory.JUNK.getWeight(0)), rootX, rootY, 2, 0, columnWidth, rowHeight * 2 + 2);
+        drawHeaderCell(drawContext, "FISH", String.format("(%s%%)", LootCategory.FISH.getWeight(lotsLevel)), rootX, rootY, 0, 0, columnWidth, rowHeight * 2 + 2);
+        drawHeaderCell(drawContext, "TREASURE", String.format("(%s%%)", LootCategory.TREASURE.getWeight(lotsLevel)), rootX, rootY, 1, 0, columnWidth, rowHeight * 2 + 2);
+        drawHeaderCell(drawContext, "JUNK", String.format("(%s%%)", LootCategory.JUNK.getWeight(lotsLevel)), rootX, rootY, 2, 0, columnWidth, rowHeight * 2 + 2);
 
         // Horizontal line under the header row (between row 0 and row 1)
         int lineY = rootY + (rowHeight * 2) - 2; // 2 pixels above row 1
         drawContext.fill(rootX, lineY, rootX + tableWidth, lineY + 1, 0xFFFFFFFF);
 
         // Vertical lines between columns
-        int line1X = rootX + columnWidth * 1 - 4;
-        int line2X = rootX + columnWidth * 2 + 4;
-        drawContext.fill(line1X, rootY, line1X + 1, rootY + tableHeight, 0xFFFFFFFF);
-        drawContext.fill(line2X, rootY, line2X + 1, rootY + tableHeight, 0xFFFFFFFF);
+        int line1X = rootX + columnWidth * 1 - 2;
+        int line2X = rootX + columnWidth * 2 + 2;
+        int footerHeight = (rowHeight * 2) + 2; // Footer is 2 rows + separator line gap
+        int bodyHeight = tableHeight - footerHeight + 2; // Necessary so the lines don't appear over the footer
+        drawContext.fill(line1X, rootY - 2, line1X + 1, rootY + bodyHeight, 0xFFFFFFFF);
+        drawContext.fill(line2X, rootY - 2, line2X + 1, rootY + bodyHeight, 0xFFFFFFFF);
 
         // Draw table body cells
         // Fish
-        drawBodyCell(drawContext, codIcon, "25%", rootX, rootY, 0, 2, columnWidth, rowHeight);
-        drawBodyCell(drawContext, salmonIcon, "25%", rootX, rootY, 0, 3, columnWidth, rowHeight);
-        drawBodyCell(drawContext, pufferfishIcon, "25%", rootX, rootY, 0, 4, columnWidth, rowHeight);
-        drawBodyCell(drawContext, tropicalFishIcon, "25%", rootX, rootY, 0, 5, columnWidth, rowHeight);
+        drawBodyCell(drawContext, codIcon, calculatePercentage(LootCategory.FISH, FishType.RAW_COD, lotsLevel), rootX, rootY, 0, 2, columnWidth, rowHeight);
+        drawBodyCell(drawContext, salmonIcon, calculatePercentage(LootCategory.FISH, FishType.RAW_SALMON, lotsLevel), rootX, rootY, 0, 3, columnWidth, rowHeight);
+        drawBodyCell(drawContext, pufferfishIcon, calculatePercentage(LootCategory.FISH, FishType.PUFFERFISH, lotsLevel), rootX, rootY, 0, 4, columnWidth, rowHeight);
+        drawBodyCell(drawContext, tropicalFishIcon, calculatePercentage(LootCategory.FISH, FishType.TROPICAL_FISH, lotsLevel), rootX, rootY, 0, 5, columnWidth, rowHeight);
         // Treasure
-        drawBodyCell(drawContext, enchantedBowIcon, "25%", rootX, rootY, 1, 2, columnWidth, rowHeight);
-        drawBodyCell(drawContext, enchantedBookIcon, "25%", rootX, rootY, 1, 3, columnWidth, rowHeight);
-        drawBodyCell(drawContext, enchantedFishingRodIcon, "25%", rootX, rootY, 1, 4, columnWidth, rowHeight);
-        drawBodyCell(drawContext, nameTagIcon, "25%", rootX, rootY, 1, 5, columnWidth, rowHeight);
-        drawBodyCell(drawContext, nautilusShellIcon, "25%", rootX, rootY, 1, 6, columnWidth, rowHeight);
-        drawBodyCell(drawContext, saddleIcon, "25%", rootX, rootY, 1, 7, columnWidth, rowHeight);
+        drawBodyCell(drawContext, enchantedBowIcon, calculatePercentage(LootCategory.TREASURE, TreasureType.BOW, lotsLevel), rootX, rootY, 1, 2, columnWidth, rowHeight);
+        drawBodyCell(drawContext, enchantedBookIcon, calculatePercentage(LootCategory.TREASURE, TreasureType.ENCHANTED_BOOK, lotsLevel), rootX, rootY, 1, 3, columnWidth, rowHeight);
+        drawBodyCell(drawContext, enchantedFishingRodIcon, calculatePercentage(LootCategory.TREASURE, TreasureType.FISHING_ROD, lotsLevel), rootX, rootY, 1, 4, columnWidth, rowHeight);
+        drawBodyCell(drawContext, nameTagIcon, calculatePercentage(LootCategory.TREASURE, TreasureType.NAME_TAG, lotsLevel), rootX, rootY, 1, 5, columnWidth, rowHeight);
+        drawBodyCell(drawContext, nautilusShellIcon, calculatePercentage(LootCategory.TREASURE, TreasureType.NAUTILUS_SHELL, lotsLevel), rootX, rootY, 1, 6, columnWidth, rowHeight);
+        drawBodyCell(drawContext, saddleIcon, calculatePercentage(LootCategory.TREASURE, TreasureType.SADDLE, lotsLevel), rootX, rootY, 1, 7, columnWidth, rowHeight);
         // Junk
-        drawBodyCell(drawContext, lilyPadIcon, "25%", rootX, rootY, 2, 2, columnWidth, rowHeight);
-        drawBodyCell(drawContext, boneIcon, "25%", rootX, rootY, 2, 3, columnWidth, rowHeight);
-        drawBodyCell(drawContext, bowlIcon, "25%", rootX, rootY, 2, 4, columnWidth, rowHeight);
-        drawBodyCell(drawContext, leatherIcon, "25%", rootX, rootY, 2, 5, columnWidth, rowHeight);
-        drawBodyCell(drawContext, leatherBootsIcon, "25%", rootX, rootY, 2, 6, columnWidth, rowHeight);
-        drawBodyCell(drawContext, rottenFleshIcon, "25%", rootX, rootY, 2, 7, columnWidth, rowHeight);
-        drawBodyCell(drawContext, waterBottleIcon, "25%", rootX, rootY, 2, 8, columnWidth, rowHeight);
-        drawBodyCell(drawContext, tripwireHookIcon, "25%", rootX, rootY, 2, 9, columnWidth, rowHeight);
-        drawBodyCell(drawContext, stickIcon, "25%", rootX, rootY, 2, 10, columnWidth, rowHeight);
-        drawBodyCell(drawContext, stringIcon, "25%", rootX, rootY, 2, 11, columnWidth, rowHeight);
-        drawBodyCell(drawContext, fishingRodIcon, "25%", rootX, rootY, 2, 12, columnWidth, rowHeight);
-        drawBodyCell(drawContext, inkSacIcon, "25%", rootX, rootY, 2, 13, columnWidth, rowHeight);
+        drawBodyCell(drawContext, lilyPadIcon, calculatePercentage(LootCategory.JUNK, JunkType.LILY_PAD, lotsLevel), rootX, rootY, 2, 2, columnWidth, rowHeight);
+        drawBodyCell(drawContext, boneIcon, calculatePercentage(LootCategory.JUNK, JunkType.BONE, lotsLevel), rootX, rootY, 2, 3, columnWidth, rowHeight);
+        drawBodyCell(drawContext, bowlIcon, calculatePercentage(LootCategory.JUNK, JunkType.BOWL, lotsLevel), rootX, rootY, 2, 4, columnWidth, rowHeight);
+        drawBodyCell(drawContext, leatherIcon, calculatePercentage(LootCategory.JUNK, JunkType.LEATHER, lotsLevel), rootX, rootY, 2, 5, columnWidth, rowHeight);
+        drawBodyCell(drawContext, leatherBootsIcon, calculatePercentage(LootCategory.JUNK, JunkType.LEATHER_BOOTS, lotsLevel), rootX, rootY, 2, 6, columnWidth, rowHeight);
+        drawBodyCell(drawContext, rottenFleshIcon, calculatePercentage(LootCategory.JUNK, JunkType.ROTTEN_FLESH, lotsLevel), rootX, rootY, 2, 7, columnWidth, rowHeight);
+        drawBodyCell(drawContext, waterBottleIcon, calculatePercentage(LootCategory.JUNK, JunkType.WATER_BOTTLE, lotsLevel), rootX, rootY, 2, 8, columnWidth, rowHeight);
+        drawBodyCell(drawContext, tripwireHookIcon, calculatePercentage(LootCategory.JUNK, JunkType.TRIPWIRE_HOOK, lotsLevel), rootX, rootY, 2, 9, columnWidth, rowHeight);
+        drawBodyCell(drawContext, stickIcon, calculatePercentage(LootCategory.JUNK, JunkType.STICK, lotsLevel), rootX, rootY, 2, 10, columnWidth, rowHeight);
+        drawBodyCell(drawContext, stringIcon, calculatePercentage(LootCategory.JUNK, JunkType.STRING_ITEM, lotsLevel), rootX, rootY, 2, 11, columnWidth, rowHeight);
+        drawBodyCell(drawContext, fishingRodIcon, calculatePercentage(LootCategory.JUNK, JunkType.FISHING_ROD, lotsLevel), rootX, rootY, 2, 12, columnWidth, rowHeight);
+        drawBodyCell(drawContext, inkSacIcon, calculatePercentage(LootCategory.JUNK, JunkType.INK_SAC, lotsLevel), rootX, rootY, 2, 13, columnWidth, rowHeight);
+
+        // Draw footer
+        String footerLine1 = String.format("Luck of the Sea %s  Lure %s", Utils.numToRomanNumeral(lotsLevel), Utils.numToRomanNumeral(lureLevel));
+        String footerLine2 = String.format("Time to lure: %s seconds", getLureTimeRange(lureLevel));
+        drawFooter(drawContext, footerLine1, footerLine2, rootX, rootY, tableHeight + 2, rowHeight, tableWidth);
 
         drawContext.getMatrices().popMatrix();
     }
@@ -265,14 +295,67 @@ public class LootTableRenderer {
         drawContext.getMatrices().pushMatrix();
         drawContext.getMatrices().translate(startX, cellY);
         drawContext.getMatrices().scale(iconScale, iconScale);
-        drawContext.drawItem(icon, 0, 0); // draw at 0,0 since we already translated
+        drawContext.drawItem(icon, 0, 0);
         drawContext.getMatrices().popMatrix();
 
         // Draw the percentage text next to it
         drawContext.drawText(client.textRenderer, text, startX + scaledIconSize + padding, cellY, 0xFFFFFFFF, false);
     }
 
-    public <T extends LootItem> double calculatePercentage(LootCategory category, T subType, int lotsLevel) {
-        return category.getWeight(lotsLevel) * subType.getWeight();
+    private void drawFooter(DrawContext drawContext, String line1, String line2, int rootX, int rootY, int tableHeight, int rowHeight, int tableWidth) {
+        int footer1Y = rootY + tableHeight - rowHeight * 2;
+        int footer2Y = rootY + tableHeight - rowHeight;
+
+        // Separator line above footer
+        drawContext.fill(rootX, footer1Y - 2, rootX + tableWidth, footer1Y - 1, 0xFFFFFFFF);
+
+        // Footer text
+        drawContext.drawText(client.textRenderer, line1, rootX + 2, footer1Y, 0xFFFFFFFF, false);
+        drawContext.drawText(client.textRenderer, line2, rootX + 2, footer2Y, 0xFFFFFFFF, false);
+    }
+
+    private <T extends LootItem> String calculatePercentage(LootCategory category, T subType, int lotsLevel) {
+        double categoryChance = category.getWeight(lotsLevel) / 100f;
+        double itemChance = subType.getWeight() / 100f;
+        BigDecimal roundedValue = new BigDecimal((categoryChance * itemChance) * 100f).setScale(2, RoundingMode.HALF_UP);
+        return roundedValue.toString() + "%";
+    }
+
+    private int getLotsLevel(ItemStack handContent) {
+        int lotsLevel;
+        if (handContent.getItem() instanceof FishingRodItem && client.world != null) {
+            lotsLevel = handContent.getEnchantments().getLevel(
+                    client.world.getRegistryManager()
+                            .getOrThrow(RegistryKeys.ENCHANTMENT)
+                            .getOrThrow(Enchantments.LUCK_OF_THE_SEA)
+            );
+        } else {
+            lotsLevel = -1;
+        }
+        return lotsLevel;
+    }
+
+    private int getLureLevel(ItemStack handContent) {
+        int lureLevel;
+        if (handContent.getItem() instanceof FishingRodItem && client.world != null) {
+            lureLevel = handContent.getEnchantments().getLevel(
+                    client.world.getRegistryManager()
+                            .getOrThrow(RegistryKeys.ENCHANTMENT)
+                            .getOrThrow(Enchantments.LURE)
+            );
+        } else {
+            lureLevel = -1;
+        }
+        return lureLevel;
+    }
+
+    private String getLureTimeRange(int lureLevel) {
+        return switch (lureLevel){
+            case 0 -> "5-30";
+            case 1 -> "<25";
+            case 2 -> "<20";
+            case 3 -> "<15";
+            default -> "Invalid Lure level";
+        };
     }
 }
