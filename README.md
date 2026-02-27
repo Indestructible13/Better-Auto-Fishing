@@ -11,3 +11,7 @@ This mod isn't super fancy, and it doesn't have every feature out there, but it 
 
 ## Installation
 TODO
+
+## Dependencies
+ - Cloth Config (required)
+ - Mod Menu (recommended)
