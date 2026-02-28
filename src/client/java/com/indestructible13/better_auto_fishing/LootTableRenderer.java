@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.util.List;
 
 public class LootTableRenderer {
@@ -281,7 +282,9 @@ public class LootTableRenderer {
 
         // Draw footer lines positioned relative to footerStartY
         String footerLine1 = String.format("Luck of the Sea %s  Lure %s", Utils.numToRomanNumeral(lotsLevel), Utils.numToRomanNumeral(lureLevel));
-        String footerLine2 = String.format("Time to lure: %s seconds", getLureTimeRange(lureLevel));
+        boolean isRaining = BetterAutoFishingClient.isRaining();
+        boolean isSkyVisible = BetterAutoFishingClient.isSkyVisible();
+        String footerLine2 = String.format("Time to lure: %ss %s%s", calculateLureTime(lureLevel, isRaining, isSkyVisible), (isRaining && BetterAutoFishingClient.getBobber() != null) ? "(raining)" : "", !isSkyVisible ? "(no sky)" : "");
         drawFooter(drawContext, footerLine1, footerLine2, rootX, footerStartY);
 
         drawContext.getMatrices().popMatrix();
@@ -359,13 +362,52 @@ public class LootTableRenderer {
         return lureLevel;
     }
 
-    private String getLureTimeRange(int lureLevel) {
-        return switch (lureLevel) {
-            case 0 -> "5-30";
-            case 1 -> "<25";
-            case 2 -> "<20";
-            case 3 -> "<15";
-            default -> "Invalid Lure level";
-        };
+    private String calculateLureTime(int lureLevel, boolean isRaining, boolean skyVisible) {
+        double minTicks;
+        double maxTicks;
+        switch (lureLevel) {
+            case 1 -> {
+                minTicks = 0;
+                maxTicks = 25 * 20; // 25 seconds
+            }
+            case 2 -> {
+                minTicks = 0;
+                maxTicks = 20 * 20; // 20 seconds
+            }
+            case 3 -> {
+                minTicks = 0;
+                maxTicks = 15 * 20; // 15 seconds
+            }
+            default -> {
+                minTicks = 5 * 20; // 5 seconds
+                maxTicks = 30 * 20; // 30 seconds
+            }
+        }
+
+        // Calculate effect of rain
+        // When raining, each tick has a 25% chance of counting down 2 instead of 1
+        // Means time will theoretically be reduced by about 1/5 (unless you get REALLY unlucky)
+        if (isRaining) {
+            minTicks = minTicks * 0.8;
+            maxTicks = maxTicks * 0.8;
+        }
+
+        // Calculate effect of not being exposed to the sky
+        // When there are blocks that stop or diffuse light above the bobber, each tick has a 50% chance of not decrementing the count
+        // Means time will theoretically be doubled (unless you get REALLY lucky)
+        if (!skyVisible) {
+            minTicks = minTicks * 2;
+            maxTicks = maxTicks * 2;
+        }
+
+        // Convert ticks to seconds
+        double minSeconds = minTicks / 20.0;
+        double maxSeconds = maxTicks / 20.0;
+
+        // Convert min and max values to printable string output and return
+        DecimalFormat df = new DecimalFormat("0.#");
+        if (minSeconds <= 0) {
+            return "<" + df.format(maxSeconds);
+        } else return df.format(minSeconds) + "-" + df.format(maxSeconds);
     }
 }

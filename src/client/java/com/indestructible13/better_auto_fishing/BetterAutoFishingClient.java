@@ -27,6 +27,7 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.Heightmap;
 import net.minecraft.world.World;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
@@ -57,6 +58,10 @@ public class BetterAutoFishingClient implements ClientModInitializer {
 
     private MinecraftClient client;
     private PlayerEntity player;
+
+    private static boolean isRaining;
+    private static boolean isSkyVisible;
+    private static FishingBobberEntity bobber;
 
     @Override
     public void onInitializeClient() {
@@ -110,7 +115,15 @@ public class BetterAutoFishingClient implements ClientModInitializer {
         this.player = client.player;
         if (player == null) return;
 
-        FishingBobberEntity bobber = player.fishHook;
+        bobber = player.fishHook;
+
+        // Detect if it's raining on the bobber
+        // Updates isRaining property
+        detectRain();
+
+        // Detect if there is sky above the bobber
+        // Updates isSkyVisible property
+        detectSky();
 
         // Toggle the mod active state when the toggle keybind is pressed
         while (toggleActiveKey.wasPressed()) {
@@ -126,8 +139,32 @@ public class BetterAutoFishingClient implements ClientModInitializer {
         // Only runs in a dev environment
         if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
             while (testKey.wasPressed()) {
-                LOGGER.info("Test key was pressed");
-                Utils.sendDebugChatMessage(player, "Test key was pressed");
+                if (bobber != null) {
+                    BlockPos bobberPos = bobber.getBlockPos();
+                    World world = bobber.getEntityWorld();
+
+                    // Check if it's raining in the world
+                    boolean worldRaining = world.isRaining();
+                    Utils.sendDebugChatMessage(player,"Is raining in world: " + worldRaining);
+
+                    // Check if it can rain in the current biome
+                    boolean biomeHasPrecipitation = world.getBiome(bobberPos).value().hasPrecipitation();
+                    Utils.sendDebugChatMessage(player,"Biome has precipitation: " + biomeHasPrecipitation);
+
+                    // Check for sky access above bobber
+                    int bobberY = bobberPos.getY() + 1; // Add 1 because bobber tends to sink into the block it's on
+                    int highestBlockY = world.getTopY(Heightmap.Type.MOTION_BLOCKING, bobberPos.getX(), bobberPos.getZ());
+                    boolean skyAccess = bobberY >= highestBlockY; // If the bobber is above the highest block in the world at its X and Z coordinates, then the sky above must be clear
+                    Utils.sendDebugChatMessage(player,"Bobber has sky access: " + skyAccess);
+
+                    // Check if it's raining on bobber
+                    // Must pass checks:
+                    // - Is raining in world
+                    // - Be in a biome where it can rain (not desert, etc.)
+                    // - Have sky access (no blocks above bobber)
+                    isRaining = worldRaining && biomeHasPrecipitation && skyAccess;
+                    Utils.sendDebugChatMessage(player,"Raining on bobber: " + isRaining);
+                }
             }
         }
 
@@ -161,7 +198,7 @@ public class BetterAutoFishingClient implements ClientModInitializer {
                     // Bobber should be in a valid water layer type block
                     if (getBlockLayerType(state, world, bobberPos) != LayerType.WATER_LAYER) { return; }
 
-                    if (!isOpenWater(bobber)) {
+                    if (!isOpenWater()) {
                         Utils.sendActionBarMessage(client, Text.literal("You are not fishing in open water!"));
                     }
                 } else { // Bobber is null, it must have been reeled in manually again
@@ -340,7 +377,7 @@ public class BetterAutoFishingClient implements ClientModInitializer {
         return false;
     }
 
-    private boolean isOpenWater(FishingBobberEntity bobber) {
+    private boolean isOpenWater() {
         World world = bobber.getEntityWorld();
         BlockPos bobberPos = bobber.getBlockPos();
 
@@ -425,5 +462,48 @@ public class BetterAutoFishingClient implements ClientModInitializer {
         AIR_LAYER,    // Air and lily pads
         WATER_LAYER,  // Water, waterlogged blocks, bubble columns
         INVALID       // Anything else (dirt, stone, flowing water, etc.)
+    }
+
+    private void detectRain() {
+        if (bobber != null) {
+            BlockPos bobberPos = bobber.getBlockPos();
+            World world = bobber.getEntityWorld();
+
+            // Check if it's raining in the world
+            boolean worldRaining = world.isRaining();
+
+            // Check if it can rain in the current biome
+            boolean biomeHasPrecipitation = world.getBiome(bobberPos).value().hasPrecipitation();
+
+            // Check for sky access above bobber
+            int bobberY = bobberPos.getY() + 1; // Add 1 because bobber tends to sink into the block it's on
+            int highestBlockY = world.getTopY(Heightmap.Type.MOTION_BLOCKING, bobberPos.getX(), bobberPos.getZ());
+            boolean skyAccess = bobberY >= highestBlockY; // If the bobber is above the highest block in the world at its X and Z coordinates, then the sky above must be clear
+
+            // Check if it's raining on bobber
+            // Must pass checks:
+            // - Is raining in world
+            // - Be in a biome where it can rain (not desert, etc.)
+            // - Have sky access (no blocks above bobber)
+            isRaining = worldRaining && biomeHasPrecipitation && skyAccess;
+        } else isRaining = false; // If the bobber is null, then it's not raining on the bobber
+    }
+
+    public static boolean isRaining() {
+        return isRaining;
+    }
+
+    private void detectSky() {
+        if (bobber != null) {
+            isSkyVisible = bobber.getEntityWorld().isSkyVisible(bobber.getBlockPos().add(0,1,0)); // Move 1 block up because the bobber tends to sink into the block it's on
+        } else isSkyVisible = true; // If the bobber is null, set to true just to show the default fishing values (otherwise it will show doubled values because of no sky penalty)
+    }
+
+    public static boolean isSkyVisible() {
+        return isSkyVisible;
+    }
+
+    public static FishingBobberEntity getBobber() {
+        return bobber;
     }
 }
