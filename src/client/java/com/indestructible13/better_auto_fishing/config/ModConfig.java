@@ -62,8 +62,8 @@ public class ModConfig implements ConfigData {
         public boolean showFishingLootTable = false;
 
         @ConfigEntry.Gui.Tooltip
-        @ConfigEntry.BoundedDiscrete(min = 1, max = 100)
-        public int tableScale = 50; // Percentage value the table will be scaled by
+        @ConfigEntry.BoundedDiscrete(min = 1, max = 200)
+        public int tableScale = 100; // Percentage value the table will be scaled by
 
         @ConfigEntry.Gui.Tooltip
         @ConfigEntry.BoundedDiscrete(min = 0, max = 100)
