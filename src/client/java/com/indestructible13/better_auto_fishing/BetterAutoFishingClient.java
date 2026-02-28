@@ -20,6 +20,7 @@ import com.indestructible13.better_auto_fishing.mixin.FishingBobberEntityAccesso
 import net.minecraft.fluid.FluidState;
 import net.minecraft.item.FishingRodItem;
 import net.minecraft.item.ItemStack;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
@@ -29,11 +30,13 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.World;
+import net.minecraft.world.biome.Biome;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Random;
+import java.util.Set;
 
 public class BetterAutoFishingClient implements ClientModInitializer {
     public static final String MOD_ID = "better_auto_fishing";
@@ -63,6 +66,9 @@ public class BetterAutoFishingClient implements ClientModInitializer {
     private static boolean isSkyVisible;
     private static FishingBobberEntity bobber;
     private static boolean isOpenWater;
+    private static boolean isJungle;
+
+    private static final Set<String> JUNGLE_BIOMES = Set.of("jungle", "bamboo_jungle", "sparse_jungle");
 
     @Override
     public void onInitializeClient() {
@@ -129,6 +135,9 @@ public class BetterAutoFishingClient implements ClientModInitializer {
         // Detect if the bobber is in open water
         detectOpenWater();
 
+        // Detect if the bobber is in a jungle biome
+        detectJungle();
+
         // Toggle the mod active state when the toggle keybind is pressed
         while (toggleActiveKey.wasPressed()) {
             config.active = !config.active;
@@ -143,32 +152,7 @@ public class BetterAutoFishingClient implements ClientModInitializer {
         // Only runs in a dev environment
         if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
             while (testKey.wasPressed()) {
-                if (bobber != null) {
-                    BlockPos bobberPos = bobber.getBlockPos();
-                    World world = bobber.getEntityWorld();
-
-                    // Check if it's raining in the world
-                    boolean worldRaining = world.isRaining();
-                    Utils.sendDebugChatMessage(player,"Is raining in world: " + worldRaining);
-
-                    // Check if it can rain in the current biome
-                    boolean biomeHasPrecipitation = world.getBiome(bobberPos).value().hasPrecipitation();
-                    Utils.sendDebugChatMessage(player,"Biome has precipitation: " + biomeHasPrecipitation);
-
-                    // Check for sky access above bobber
-                    int bobberY = bobberPos.getY() + 1; // Add 1 because bobber tends to sink into the block it's on
-                    int highestBlockY = world.getTopY(Heightmap.Type.MOTION_BLOCKING, bobberPos.getX(), bobberPos.getZ());
-                    boolean skyAccess = bobberY >= highestBlockY; // If the bobber is above the highest block in the world at its X and Z coordinates, then the sky above must be clear
-                    Utils.sendDebugChatMessage(player,"Bobber has sky access: " + skyAccess);
-
-                    // Check if it's raining on bobber
-                    // Must pass checks:
-                    // - Is raining in world
-                    // - Be in a biome where it can rain (not desert, etc.)
-                    // - Have sky access (no blocks above bobber)
-                    isRaining = worldRaining && biomeHasPrecipitation && skyAccess;
-                    Utils.sendDebugChatMessage(player,"Raining on bobber: " + isRaining);
-                }
+                Utils.sendDebugChatMessage(player, "Test key was pressed");
             }
         }
 
@@ -383,12 +367,8 @@ public class BetterAutoFishingClient implements ClientModInitializer {
 
     private void detectOpenWater() {
         if (bobber != null) {
-            World world = bobber.getEntityWorld();
-            BlockPos bobberPos = bobber.getBlockPos();
-            BlockState state = world.getBlockState(bobberPos);
-
             // Only calculate open water when the bobber has actually hit the water
-            if (getBlockLayerType(state, world, bobberPos) != LayerType.WATER_LAYER) {
+            if (!bobberIsInWater()) {
                 isOpenWater = true; // Bobber not in water yet, show normal values
                 return;
             }
@@ -400,7 +380,8 @@ public class BetterAutoFishingClient implements ClientModInitializer {
              * - OR: water source blocks, waterlogged blocks without collision, and bubble columns only
              * Mixing types in a single layer = not open water
              */
-
+            World world = bobber.getEntityWorld();
+            BlockPos bobberPos = bobber.getBlockPos();
             // Check each of the 4 vertical layers
             for (int y = -1; y <= 2; y++) {
                 LayerType expectedType = null;
@@ -409,7 +390,7 @@ public class BetterAutoFishingClient implements ClientModInitializer {
                 for (int x = -2; x <= 2; x++) {
                     for (int z = -2; z <= 2; z++) {
                         BlockPos checkPos = bobberPos.add(x, y, z);
-                        state = world.getBlockState(checkPos);
+                        BlockState state = world.getBlockState(checkPos);
 
                         LayerType blockType = getBlockLayerType(state, world, checkPos);
 
@@ -522,7 +503,33 @@ public class BetterAutoFishingClient implements ClientModInitializer {
         return isSkyVisible;
     }
 
+    private void detectJungle() {
+        if (bobber != null) {
+            // Only check for jungle when the bobber has actually hit the water
+            // While it's flying through the air, use default values
+            if (!bobberIsInWater()) return;
+
+            // Now that the bobber is in the water, check for jungle biome (jungle, bamboo_jungle, sparse_jungle)
+            BlockPos bobberPos = bobber.getBlockPos();
+            RegistryEntry<Biome> biomeEntry = bobber.getEntityWorld().getBiome(bobberPos);
+            String biome = biomeEntry.getKey().map(key -> key.getValue().getPath()).orElse("unknown");
+            isJungle = JUNGLE_BIOMES.contains(biome);
+        } else isJungle = false; // By default, show loot table for most biomes (not jungle)
+    }
+
+    public static boolean isJungle() {
+        return isJungle;
+    }
+
     public static FishingBobberEntity getBobber() {
         return bobber;
+    }
+
+    @SuppressWarnings({"always inverted", "BooleanMethodIsAlwaysInverted"})
+    private boolean bobberIsInWater() {
+        World world = bobber.getEntityWorld();
+        BlockPos bobberPos = bobber.getBlockPos();
+        BlockState state = world.getBlockState(bobberPos);
+        return getBlockLayerType(state, world, bobberPos) == LayerType.WATER_LAYER;
     }
 }

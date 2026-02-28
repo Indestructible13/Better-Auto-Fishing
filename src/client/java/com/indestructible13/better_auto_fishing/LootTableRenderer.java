@@ -11,12 +11,15 @@ import net.minecraft.item.FishingRodItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.registry.RegistryKeys;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class LootTableRenderer {
@@ -38,7 +41,7 @@ public class LootTableRenderer {
     private static final int TABLE_WIDTH = COLUMN_WIDTH * NUM_COLUMNS;
 
     // Represents one item row in the table body — add new rows by adding entries to the bodyCells list in renderTable
-    private record BodyCell(ItemStack icon, LootCategory category, LootItem subType, int column, int row) {}
+    private record BodyCell(ItemStack icon, LootCategory category, LootItem subType, int column) {}
 
     // Item icons - initialized once lazily on first render
     private ItemStack codIcon;
@@ -52,6 +55,7 @@ public class LootTableRenderer {
     private ItemStack nautilusShellIcon;
     private ItemStack saddleIcon;
     private ItemStack lilyPadIcon;
+    private ItemStack bambooIcon;
     private ItemStack boneIcon;
     private ItemStack bowlIcon;
     private ItemStack leatherIcon;
@@ -85,6 +89,7 @@ public class LootTableRenderer {
 
         // Junk
         lilyPadIcon = new ItemStack(Items.LILY_PAD);
+        bambooIcon = new ItemStack(Items.BAMBOO);
         boneIcon = new ItemStack(Items.BONE);
         bowlIcon = new ItemStack(Items.BOWL);
         leatherIcon = new ItemStack(Items.LEATHER);
@@ -167,13 +172,32 @@ public class LootTableRenderer {
         STICK(5.0),          // 5% chance
         STRING_ITEM(5.0),    // 5% chance
         FISHING_ROD(2.0),    // 2% chance
-        INK_SAC(1.0);        // 1% chance
+        INK_SAC(1.0),        // 1% chance
+        BAMBOO(0.0);         // Only found in jungle biomes
 
         private final double weight;
         JunkType(double weight) { this.weight = weight; }
 
         @Override
         public double getWeight() { return weight; }
+
+        // Modified values in jungle biomes (jungle, sparse jungle, bamboo jungle)
+        // Bamboo is added with weight 10, bringing the total pool weight from 100 to 110
+        public double getWeight(boolean isJungle) {
+            if (!isJungle) return this.weight;
+            return switch (this) {
+                case LILY_PAD ->
+                        (17.0 / 110.0) * 100.0; // ~15.45% chance
+                case BAMBOO, BONE, BOWL, LEATHER, LEATHER_BOOTS, ROTTEN_FLESH, WATER_BOTTLE, TRIPWIRE_HOOK ->
+                        (10.0 / 110.0) * 100.0; // ~9.09% chance
+                case STICK, STRING_ITEM ->
+                        (5.0 / 110.0) * 100.0;  // ~4.55% chance
+                case FISHING_ROD ->
+                        (2.0 / 110.0) * 100.0;  // ~1.82% chance
+                case INK_SAC ->
+                        (1.0 / 110.0) * 100.0;  // ~0.91% chance
+            };
+        }
     }
 
     public LootTableRenderer() {
@@ -208,44 +232,22 @@ public class LootTableRenderer {
         // Body cells — to add a new row, just add a new BodyCell entry here
         // Column 0 = Fish, Column 1 = Treasure, Column 2 = Junk
         // Rows are 0-indexed relative to the start of the body section
-        List<BodyCell> bodyCells = List.of(
-                // Fish
-                new BodyCell(codIcon,                LootCategory.FISH,     FishType.RAW_COD,              0, 0),
-                new BodyCell(salmonIcon,             LootCategory.FISH,     FishType.RAW_SALMON,           0, 1),
-                new BodyCell(pufferfishIcon,         LootCategory.FISH,     FishType.PUFFERFISH,           0, 2),
-                new BodyCell(tropicalFishIcon,       LootCategory.FISH,     FishType.TROPICAL_FISH,        0, 3),
-                // Treasure
-                new BodyCell(enchantedBowIcon,       LootCategory.TREASURE, TreasureType.BOW,              1, 0),
-                new BodyCell(enchantedBookIcon,      LootCategory.TREASURE, TreasureType.ENCHANTED_BOOK,   1, 1),
-                new BodyCell(enchantedFishingRodIcon,LootCategory.TREASURE, TreasureType.FISHING_ROD,      1, 2),
-                new BodyCell(nameTagIcon,            LootCategory.TREASURE, TreasureType.NAME_TAG,         1, 3),
-                new BodyCell(nautilusShellIcon,      LootCategory.TREASURE, TreasureType.NAUTILUS_SHELL,   1, 4),
-                new BodyCell(saddleIcon,             LootCategory.TREASURE, TreasureType.SADDLE,           1, 5),
-                // Junk
-                new BodyCell(lilyPadIcon,            LootCategory.JUNK,     JunkType.LILY_PAD,             2, 0),
-                new BodyCell(boneIcon,               LootCategory.JUNK,     JunkType.BONE,                 2, 1),
-                new BodyCell(bowlIcon,               LootCategory.JUNK,     JunkType.BOWL,                 2, 2),
-                new BodyCell(leatherIcon,            LootCategory.JUNK,     JunkType.LEATHER,              2, 3),
-                new BodyCell(leatherBootsIcon,       LootCategory.JUNK,     JunkType.LEATHER_BOOTS,        2, 4),
-                new BodyCell(rottenFleshIcon,        LootCategory.JUNK,     JunkType.ROTTEN_FLESH,         2, 5),
-                new BodyCell(waterBottleIcon,        LootCategory.JUNK,     JunkType.WATER_BOTTLE,         2, 6),
-                new BodyCell(tripwireHookIcon,       LootCategory.JUNK,     JunkType.TRIPWIRE_HOOK,        2, 7),
-                new BodyCell(stickIcon,              LootCategory.JUNK,     JunkType.STICK,                2, 8),
-                new BodyCell(stringIcon,             LootCategory.JUNK,     JunkType.STRING_ITEM,          2, 9),
-                new BodyCell(fishingRodIcon,         LootCategory.JUNK,     JunkType.FISHING_ROD,          2, 10),
-                new BodyCell(inkSacIcon,             LootCategory.JUNK,     JunkType.INK_SAC,              2, 11)
-        );
+        boolean isJungle = BetterAutoFishingClient.isJungle();
+        List<BodyCell> bodyCells = getBodyCells(isJungle);
 
         // --- Section Y positions — the table is divided into 3 sections, each positioned below the last ---
 
         // Header: drawn at rootY, occupies HEADER_ROWS rows
         int headerSeparatorY = rootY + (HEADER_ROWS * ROW_HEIGHT);
 
-        // Body: starts below the header separator, rows are 0-indexed relative to bodyStartY
+        // Body: count cells per column ahead of time to determine the table height
+        int[] columnCounts = new int[NUM_COLUMNS];
+        for (BodyCell cell : bodyCells) columnCounts[cell.column()]++;
+        int maxBodyRow = Arrays.stream(columnCounts).max().orElse(0);
+
         int bodyStartY = headerSeparatorY + SEPARATOR_OFFSET;
-        int maxBodyRow = bodyCells.stream().mapToInt(BodyCell::row).max().orElse(0);
         @SuppressWarnings("redundant")
-        int bodyEndY = bodyStartY + (maxBodyRow + 1) * ROW_HEIGHT;
+        int bodyEndY = bodyStartY + maxBodyRow * ROW_HEIGHT;
 
         // Footer: starts below the body separator, lines are drawn relative to footerStartY
         @SuppressWarnings("redundant")
@@ -281,10 +283,13 @@ public class LootTableRenderer {
         drawContext.fill(line2X, backgroundTop, line2X + 1, footerSeparatorY, 0xFFFFFFFF);
 
         // Draw all body cells, positioned relative to bodyStartY
+        // columnRows tracks the next available row for each column as cells are drawn
+        int[] columnRows = new int[NUM_COLUMNS];
         for (BodyCell cell : bodyCells) {
+            int row = columnRows[cell.column()]++;
             drawBodyCell(drawContext, cell.icon(),
-                    calculatePercentage(cell.category(), cell.subType(), lotsLevel, isOpenWater),
-                    rootX, bodyStartY, cell.column(), cell.row());
+                    calculatePercentage(cell.category(), cell.subType(), lotsLevel, isOpenWater, isJungle),
+                    rootX, bodyStartY, cell.column(), row);
         }
 
         // Horizontal separator between body and footer
@@ -298,6 +303,37 @@ public class LootTableRenderer {
         drawFooter(drawContext, footerLine1, footerLine2, rootX, footerStartY);
 
         drawContext.getMatrices().popMatrix();
+    }
+
+    private @NonNull List<BodyCell> getBodyCells(boolean isJungle) {
+        List<BodyCell> bodyCells = new ArrayList<>();
+        // Fish
+        bodyCells.add(new BodyCell(codIcon,                LootCategory.FISH,     FishType.RAW_COD,             0));
+        bodyCells.add(new BodyCell(salmonIcon,             LootCategory.FISH,     FishType.RAW_SALMON,          0));
+        bodyCells.add(new BodyCell(pufferfishIcon,         LootCategory.FISH,     FishType.PUFFERFISH,          0));
+        bodyCells.add(new BodyCell(tropicalFishIcon,       LootCategory.FISH,     FishType.TROPICAL_FISH,       0));
+        // Treasure
+        bodyCells.add(new BodyCell(enchantedBowIcon,       LootCategory.TREASURE, TreasureType.BOW,             1));
+        bodyCells.add(new BodyCell(enchantedBookIcon,      LootCategory.TREASURE, TreasureType.ENCHANTED_BOOK,  1));
+        bodyCells.add(new BodyCell(enchantedFishingRodIcon,LootCategory.TREASURE, TreasureType.FISHING_ROD,     1));
+        bodyCells.add(new BodyCell(nameTagIcon,            LootCategory.TREASURE, TreasureType.NAME_TAG,        1));
+        bodyCells.add(new BodyCell(nautilusShellIcon,      LootCategory.TREASURE, TreasureType.NAUTILUS_SHELL,  1));
+        bodyCells.add(new BodyCell(saddleIcon,             LootCategory.TREASURE, TreasureType.SADDLE,          1));
+        // Junk — bamboo only added in jungle biomes
+        bodyCells.add(new BodyCell(lilyPadIcon,            LootCategory.JUNK,     JunkType.LILY_PAD,            2));
+        if (isJungle) bodyCells.add(new BodyCell(bambooIcon, LootCategory.JUNK,   JunkType.BAMBOO,              2));
+        bodyCells.add(new BodyCell(boneIcon,               LootCategory.JUNK,     JunkType.BONE,                2));
+        bodyCells.add(new BodyCell(bowlIcon,               LootCategory.JUNK,     JunkType.BOWL,                2));
+        bodyCells.add(new BodyCell(leatherIcon,            LootCategory.JUNK,     JunkType.LEATHER,             2));
+        bodyCells.add(new BodyCell(leatherBootsIcon,       LootCategory.JUNK,     JunkType.LEATHER_BOOTS,       2));
+        bodyCells.add(new BodyCell(rottenFleshIcon,        LootCategory.JUNK,     JunkType.ROTTEN_FLESH,        2));
+        bodyCells.add(new BodyCell(waterBottleIcon,        LootCategory.JUNK,     JunkType.WATER_BOTTLE,        2));
+        bodyCells.add(new BodyCell(tripwireHookIcon,       LootCategory.JUNK,     JunkType.TRIPWIRE_HOOK,       2));
+        bodyCells.add(new BodyCell(stickIcon,              LootCategory.JUNK,     JunkType.STICK,               2));
+        bodyCells.add(new BodyCell(stringIcon,             LootCategory.JUNK,     JunkType.STRING_ITEM,         2));
+        bodyCells.add(new BodyCell(fishingRodIcon,         LootCategory.JUNK,     JunkType.FISHING_ROD,         2));
+        bodyCells.add(new BodyCell(inkSacIcon,             LootCategory.JUNK,     JunkType.INK_SAC,             2));
+        return bodyCells;
     }
 
     private void drawHeaderCell(DrawContext drawContext, String line1, String line2, int rootX, int rootY, int column) {
@@ -337,9 +373,10 @@ public class LootTableRenderer {
         drawContext.drawText(client.textRenderer, line2, rootX + PADDING, footerStartY + ROW_HEIGHT, 0xFFFFFFFF, false);
     }
 
-    private <T extends LootItem> String calculatePercentage(LootCategory category, T subType, int lotsLevel, boolean isOpenWater) {
+    private <T extends LootItem> String calculatePercentage(LootCategory category, T subType, int lotsLevel, boolean isOpenWater, boolean isJungle) {
         double categoryChance = category.getWeight(lotsLevel, isOpenWater) / 100f;
-        double itemChance = subType.getWeight() / 100f;
+        double itemWeight = (subType instanceof JunkType junkType) ? junkType.getWeight(isJungle) : subType.getWeight();
+        double itemChance = itemWeight / 100f;
         BigDecimal roundedValue = new BigDecimal((categoryChance * itemChance) * 100f).setScale(2, RoundingMode.HALF_UP);
         return roundedValue + "%";
     }
