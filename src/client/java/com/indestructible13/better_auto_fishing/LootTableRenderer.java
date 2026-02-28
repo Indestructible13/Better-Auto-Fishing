@@ -20,9 +20,11 @@ import java.text.DecimalFormat;
 import java.util.List;
 
 public class LootTableRenderer {
-    private MinecraftClient client;
-    private ModConfig config;
+    private final MinecraftClient client;
+    private final ModConfig config;
     private PlayerEntity player;
+
+    @SuppressWarnings("unused")
     public static final Logger LOGGER = LoggerFactory.getLogger("Better Auto Fishing");
 
     // Layout constants — change these to adjust the table's appearance
@@ -242,9 +244,11 @@ public class LootTableRenderer {
         // Body: starts below the header separator, rows are 0-indexed relative to bodyStartY
         int bodyStartY = headerSeparatorY + SEPARATOR_OFFSET;
         int maxBodyRow = bodyCells.stream().mapToInt(BodyCell::row).max().orElse(0);
+        @SuppressWarnings("redundant")
         int bodyEndY = bodyStartY + (maxBodyRow + 1) * ROW_HEIGHT;
 
         // Footer: starts below the body separator, lines are drawn relative to footerStartY
+        @SuppressWarnings("redundant")
         int footerSeparatorY = bodyEndY;
         int footerStartY = footerSeparatorY + SEPARATOR_OFFSET;
         int footerEndY = footerStartY + FOOTER_ROWS * ROW_HEIGHT;
