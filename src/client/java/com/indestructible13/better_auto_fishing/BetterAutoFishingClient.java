@@ -62,6 +62,7 @@ public class BetterAutoFishingClient implements ClientModInitializer {
     private static boolean isRaining;
     private static boolean isSkyVisible;
     private static FishingBobberEntity bobber;
+    private static boolean isOpenWater;
 
     @Override
     public void onInitializeClient() {
@@ -124,6 +125,9 @@ public class BetterAutoFishingClient implements ClientModInitializer {
         // Detect if there is sky above the bobber
         // Updates isSkyVisible property
         detectSky();
+
+        // Detect if the bobber is in open water
+        detectOpenWater();
 
         // Toggle the mod active state when the toggle keybind is pressed
         while (toggleActiveKey.wasPressed()) {
@@ -198,8 +202,8 @@ public class BetterAutoFishingClient implements ClientModInitializer {
                     // Bobber should be in a valid water layer type block
                     if (getBlockLayerType(state, world, bobberPos) != LayerType.WATER_LAYER) { return; }
 
-                    if (!isOpenWater()) {
-                        Utils.sendActionBarMessage(client, Text.literal("You are not fishing in open water!"));
+                    if (!isOpenWater) {
+                        Utils.sendActionBarMessage(client, Text.literal("Not fishing in open water! Chance of treasure 0%"));
                     }
                 } else { // Bobber is null, it must have been reeled in manually again
                     resetState();
@@ -377,49 +381,64 @@ public class BetterAutoFishingClient implements ClientModInitializer {
         return false;
     }
 
-    private boolean isOpenWater() {
-        World world = bobber.getEntityWorld();
-        BlockPos bobberPos = bobber.getBlockPos();
+    private void detectOpenWater() {
+        if (bobber != null) {
+            World world = bobber.getEntityWorld();
+            BlockPos bobberPos = bobber.getBlockPos();
+            BlockState state = world.getBlockState(bobberPos);
 
-        /*
-         * Check 5x4x5 area around the bobber (2 blocks in each horizontal direction, -1 to +2 vertically)
-         * Each horizontal layer must be entirely one type:
-         * - EITHER: air and lily pads only
-         * - OR: water source blocks, waterlogged blocks without collision, and bubble columns only
-         * Mixing types in a single layer = not open water
-         */
+            // Only calculate open water when the bobber has actually hit the water
+            if (getBlockLayerType(state, world, bobberPos) != LayerType.WATER_LAYER) {
+                isOpenWater = true; // Bobber not in water yet, show normal values
+                return;
+            }
 
-        // Check each of the 4 vertical layers
-        for (int y = -1; y <= 2; y++) {
-            LayerType expectedType = null;
+            /*
+             * Check 5x4x5 area around the bobber (2 blocks in each horizontal direction, -1 to +2 vertically)
+             * Each horizontal layer must be entirely one type:
+             * - EITHER: air and lily pads only
+             * - OR: water source blocks, waterlogged blocks without collision, and bubble columns only
+             * Mixing types in a single layer = not open water
+             */
 
-            // Check all horizontal positions in this layer (5x5 grid)
-            for (int x = -2; x <= 2; x++) {
-                for (int z = -2; z <= 2; z++) {
-                    BlockPos checkPos = bobberPos.add(x, y, z);
-                    BlockState state = world.getBlockState(checkPos);
+            // Check each of the 4 vertical layers
+            for (int y = -1; y <= 2; y++) {
+                LayerType expectedType = null;
 
-                    LayerType blockType = getBlockLayerType(state, world, checkPos);
+                // Check all horizontal positions in this layer (5x5 grid)
+                for (int x = -2; x <= 2; x++) {
+                    for (int z = -2; z <= 2; z++) {
+                        BlockPos checkPos = bobberPos.add(x, y, z);
+                        state = world.getBlockState(checkPos);
 
-                    // Invalid block type in this layer, so the layer is invalid
-                    if (blockType == LayerType.INVALID) {
-                        return false;
-                    }
+                        LayerType blockType = getBlockLayerType(state, world, checkPos);
 
-                    // Determine what type this layer should be by checking the first block
-                    if (expectedType == null) {
-                        expectedType = blockType;
-                    }
+                        // Invalid block type in this layer, so the layer is invalid
+                        if (blockType == LayerType.INVALID) {
+                            isOpenWater = false;
+                            return;
+                        }
 
-                    // This block doesn't match the layer type!
-                    if (blockType != expectedType) {
-                        return false;
+                        // Determine what type this layer should be by checking the first block
+                        if (expectedType == null) {
+                            expectedType = blockType;
+                        }
+
+                        // This block doesn't match the layer type!
+                        if (blockType != expectedType) {
+                            isOpenWater = false;
+                            return;
+                        }
                     }
                 }
             }
         }
+        // Default to true when not fishing (bobber is null) so the table shows normal values
+        isOpenWater = true; // All layers are consistent, this is open water!
+    }
 
-        return true; // All layers are consistent, this is open water!
+    public static boolean isOpenWater() {
+        return isOpenWater;
     }
 
     /**

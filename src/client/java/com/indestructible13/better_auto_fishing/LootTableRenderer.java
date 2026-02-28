@@ -101,18 +101,23 @@ public class LootTableRenderer {
         TREASURE,
         JUNK;
 
-        private double getWeight(int luckOfTheSeaLevel) {
-            if (luckOfTheSeaLevel == -1) return 0;
+        private double getRawWeight(int luckOfTheSeaLevel) {
             return switch (this) {
-                // Base 85% - 0.15% per level
-                case FISH -> 85.0 - (luckOfTheSeaLevel * 0.15); // Fish chance drops slightly
-
-                // Base 5% + 2.1% per level
-                case TREASURE -> 5.0 + (luckOfTheSeaLevel * 2.1); // Treasure chance rises
-
-                // Base 10% - 1.95% per level
-                case JUNK -> 10.0 - (luckOfTheSeaLevel * 1.95); // Junk chance drops
+                case FISH     -> 85.0 - (luckOfTheSeaLevel * 0.15);
+                case TREASURE -> 5.0  + (luckOfTheSeaLevel * 2.1);
+                case JUNK     -> 10.0 - (luckOfTheSeaLevel * 1.95);
             };
+        }
+
+        private double getWeight(int luckOfTheSeaLevel, boolean isOpenWater) {
+            if (luckOfTheSeaLevel == -1) return 0;
+            if (!isOpenWater && this == TREASURE) return 0;
+
+            double totalWeight = isOpenWater
+                    ? FISH.getRawWeight(luckOfTheSeaLevel) + TREASURE.getRawWeight(luckOfTheSeaLevel) + JUNK.getRawWeight(luckOfTheSeaLevel)
+                    : FISH.getRawWeight(luckOfTheSeaLevel) + JUNK.getRawWeight(luckOfTheSeaLevel);
+
+            return (this.getRawWeight(luckOfTheSeaLevel) / totalWeight) * 100.0;
         }
     }
 
@@ -257,9 +262,10 @@ public class LootTableRenderer {
         drawContext.fill(rootX, backgroundTop, rootX + TABLE_WIDTH, backgroundBottom, alpha << 24);
 
         // Draw header text (centered in each column)
-        drawHeaderCell(drawContext, "FISH",     String.format("(%s%%)", LootCategory.FISH.getWeight(lotsLevel)),     rootX, rootY, 0);
-        drawHeaderCell(drawContext, "TREASURE", String.format("(%s%%)", LootCategory.TREASURE.getWeight(lotsLevel)), rootX, rootY, 1);
-        drawHeaderCell(drawContext, "JUNK",     String.format("(%s%%)", LootCategory.JUNK.getWeight(lotsLevel)),     rootX, rootY, 2);
+        boolean isOpenWater = BetterAutoFishingClient.isOpenWater();
+        drawHeaderCell(drawContext, "FISH",     String.format("(%.2f%%)", LootCategory.FISH.getWeight(lotsLevel, isOpenWater)),     rootX, rootY, 0);
+        drawHeaderCell(drawContext, "TREASURE", String.format("(%.2f%%)", LootCategory.TREASURE.getWeight(lotsLevel, isOpenWater)), rootX, rootY, 1);
+        drawHeaderCell(drawContext, "JUNK",     String.format("(%.2f%%)", LootCategory.JUNK.getWeight(lotsLevel, isOpenWater)),     rootX, rootY, 2);
 
         // Horizontal separator between header and body
         drawContext.fill(rootX, headerSeparatorY, rootX + TABLE_WIDTH, headerSeparatorY + 1, 0xFFFFFFFF);
@@ -273,7 +279,7 @@ public class LootTableRenderer {
         // Draw all body cells, positioned relative to bodyStartY
         for (BodyCell cell : bodyCells) {
             drawBodyCell(drawContext, cell.icon(),
-                    calculatePercentage(cell.category(), cell.subType(), lotsLevel),
+                    calculatePercentage(cell.category(), cell.subType(), lotsLevel, isOpenWater),
                     rootX, bodyStartY, cell.column(), cell.row());
         }
 
@@ -327,8 +333,8 @@ public class LootTableRenderer {
         drawContext.drawText(client.textRenderer, line2, rootX + PADDING, footerStartY + ROW_HEIGHT, 0xFFFFFFFF, false);
     }
 
-    private <T extends LootItem> String calculatePercentage(LootCategory category, T subType, int lotsLevel) {
-        double categoryChance = category.getWeight(lotsLevel) / 100f;
+    private <T extends LootItem> String calculatePercentage(LootCategory category, T subType, int lotsLevel, boolean isOpenWater) {
+        double categoryChance = category.getWeight(lotsLevel, isOpenWater) / 100f;
         double itemChance = subType.getWeight() / 100f;
         BigDecimal roundedValue = new BigDecimal((categoryChance * itemChance) * 100f).setScale(2, RoundingMode.HALF_UP);
         return roundedValue + "%";
